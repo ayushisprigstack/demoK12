@@ -54,6 +54,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 //testing here for github ok
 
+
 Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}&{page}',[ManageTicketController::class, 'Tickets']);
 Route::get('/menuAccess/{uid}', [LoginController::class, 'menuAccess']);
 Route::post('/register',[LoginController::class,'register']);
