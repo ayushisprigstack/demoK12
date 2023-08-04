@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
 use App\Models\Avtar;
 use App\Models\SignUpCcSetting;
 use ReCaptcha\ReCaptcha;
-
+use Illuminate\Support\Facades\Log;
 class LoginController extends Controller {
 
     function Register(Request $request) {
@@ -166,8 +166,14 @@ class LoginController extends Controller {
                     'domain'=>$requstedEmailDomain
                 ];
                 $schoolAdmin = User::where('school_id',$school->id)->where('access_type',1)->first();
-                Mail::to($user->email)->send(new RegisterMailer($data, 'emails.registerMail'));
-                $ccRecipients = SignUpCcSetting::all();
+               
+                   try {
+                        Mail::to($user->email)->send(new RegisterMailer($data, 'emails.registerMail'));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
+                    }
+                    
+                    $ccRecipients = SignUpCcSetting::all();
                 if (isset($ccRecipients)) {
                     foreach ($ccRecipients as $recipent) {
                         $staffmember = User::where('id', $recipent->UserID)->first();
@@ -176,8 +182,12 @@ class LoginController extends Controller {
                             'school_name' => $schoolname->name,
                             'domain' => $requstedEmailDomain
                         ];
-                        Mail::to($staffmember->email)->send(new SignUpMailer($data, 'emails.signUpMail'));
-                    }
+                            try {
+                                Mail::to($staffmember->email)->send(new SignUpMailer($data, 'emails.signUpMail'));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
+                        }
                 }
 
                 return Response::json(array(
@@ -218,16 +228,28 @@ class LoginController extends Controller {
                 ]; 
                 
                 $mainUser = 'team.sprigstack@gmail.com';
-                Mail::to($mainUser)->send(new RegisterMailer($data, 'emails.newSchoolWithoutDomainAdd'));
-                           $ccRecipients = SignUpCcSetting::all();
+                
+                try {
+                        Mail::to($mainUser)->send(new RegisterMailer($data, 'emails.newSchoolWithoutDomainAdd'));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
+                    }
+
+
+
+                    $ccRecipients = SignUpCcSetting::all();
                 foreach($ccRecipients as $recipent){
                      $staffmember = User::where('id', $recipent->UserID)->first();
                                 $data = [
                                     'name' => $staffmember->first_name . '' . $staffmember->last_name,                                    
                                     'school_name' => $schoolname, 
                                     'domain'=>$requstedEmailDomain
-                                ];
-                                Mail::to($staffmember->email)->send(new SignUpMailer($data,'emails.signUpMail'));
+                                ];                               
+                                try {
+                                Mail::to($staffmember->email)->send(new SignUpMailer($data, 'emails.signUpMail'));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
                 }
                 return Response::json(array(
                             'response' => 'Reject',

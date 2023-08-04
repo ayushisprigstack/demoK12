@@ -29,7 +29,7 @@ class UtilizerController extends Controller {
                         $join->on('im.ID', '=', 'si.Inventory_ID')
                         ->orWhere('im.ID', '=', 'si.Loner_ID');
                     })
-                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name', 's.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num','s.Grade',
+                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name', 's.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num', 's.Grade',
                             DB::raw("GROUP_CONCAT(CONCAT(im.Device_model, IF(im.inventory_status = 3, '(Loaner)', '(Active)'), '(', im.Serial_number, ')') SEPARATOR ', ') as model"),
                             DB::raw("GROUP_CONCAT(CONCAT(im.Device_model, '(', im.Serial_number, ')')) AS serialnum"))
                     ->where('s.School_ID', $sid)
@@ -42,7 +42,7 @@ class UtilizerController extends Controller {
                         $join->on('im.ID', '=', 'si.Inventory_ID')
                         ->orWhere('im.ID', '=', 'si.Loner_ID');
                     })
-                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name','s.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num','s.Grade',
+                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name', 's.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num', 's.Grade',
                             DB::raw("GROUP_CONCAT(CONCAT(im.Device_model, IF(im.inventory_status = 3, '(Loaner)', '(Active)'), ' ', ' ') SEPARATOR '') as model"))
                     ->where('s.School_ID', $sid)
                     ->where(function ($query) use ($skey) {
@@ -115,7 +115,7 @@ class UtilizerController extends Controller {
             foreach ($getdata as $data) {
 
                 $studentinventories = StudentInventory::where('Inventory_ID', $data['Inventory_ID'])->forceDelete();
-                DeviceAllocationLog::where('Student_ID',$id)->where('Inventory_ID',$data['Inventory_ID'])->update(['Vacant_Date'=>date("Y-m-d")]);  
+                DeviceAllocationLog::where('Student_ID', $id)->where('Inventory_ID', $data['Inventory_ID'])->update(['Vacant_Date' => date("Y-m-d")]);
                 $ticket = Ticket::where('inventory_id', $data['Inventory_ID'])->update(['ticket_status' => 2]);
                 $inventory = InventoryManagement::where('ID', $data['Inventory_ID'])->update(['inventory_status' => 1]);
                 $get = Student::where('ID', $id)->forceDelete();
@@ -130,7 +130,6 @@ class UtilizerController extends Controller {
             ));
         }
     }
-
 
     function importUtilizer(Request $request) {
         try {
@@ -254,7 +253,7 @@ class UtilizerController extends Controller {
         }
     }
 
-    function UtilizerDetailsById($id){
+    function UtilizerDetailsById($id) {
         $get = Student::where('ID', $id)->first();
         $studentInventory = StudentInventory::where('Student_ID', $id)->get();
         $devicearray = array();
@@ -263,7 +262,7 @@ class UtilizerController extends Controller {
             $inventoryData = InventoryManagement::where('ID', $Inventoryid)->first();
             array_push($devicearray, $inventoryData);
         }
-            $utilizerLog = DeviceAllocationLog::where('School_ID', $get->School_ID)->where('Student_ID',$id)->get();
+        $utilizerLog = DeviceAllocationLog::where('School_ID', $get->School_ID)->where('Student_ID', $id)->get();
         $data_array = array();
         foreach ($utilizerLog as $utilizerLogData) {
             $device = InventoryManagement::where('ID', $utilizerLogData['Inventory_ID'])->first();
@@ -273,12 +272,12 @@ class UtilizerController extends Controller {
         return Response::json(array(
                     'status' => "success",
                     'msg' => $get,
-                    'allocatedDevice'=>$devicearray,
-                    'studentHistory'=>$data_array,
+                    'allocatedDevice' => $devicearray,
+                    'studentHistory' => $data_array,
         ));
     }
 
- function UtilizerData($sid, $key, $skey, $flag, $page) {
+    function UtilizerData($sid, $key, $skey, $flag, $page) {
         $subQuery = DB::table('students as s')
                 ->leftJoin('student_inventories as si', 'si.Student_ID', '=', 's.ID')
                 ->leftJoin('inventory_management as im1', 'im1.ID', '=', 'si.Inventory_ID')
@@ -312,8 +311,8 @@ class UtilizerController extends Controller {
                         DB::raw('ANY_VALUE(sub.Parent_phone_number) as Parent_phone_number'),
                         DB::raw('ANY_VALUE(sub.Student_num) as Student_num'),
                         DB::raw('ANY_VALUE(sub.Grade) as Grade'),
-                        DB::raw('CONCAT(GROUP_CONCAT(sub.inventory_serial_number), ",", GROUP_CONCAT(sub.loner_serial_number)) as Serial_number'),
-                        DB::raw('CONCAT(GROUP_CONCAT(sub.inventory_ID), ",", GROUP_CONCAT(sub.loner_ID)) as Inventory_IDs')
+                        DB::raw('CASE WHEN TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_serial_number, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_serial_number, "")))) = "" THEN null ELSE TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_serial_number, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_serial_number, "")))) END as Serial_number'),
+                        DB::raw('CASE WHEN TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_ID, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_ID, "")))) = "" THEN null ELSE TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_ID, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_ID, "")))) END as Inventory_IDs')
                 )
                 ->groupBy('sub.utilizerid');
 
@@ -359,6 +358,63 @@ class UtilizerController extends Controller {
             array_push($data_array, ['StudentName' => $utilizerData->Device_user_first_name . ' ' . $utilizerData->Device_user_last_name, 'Student_num' => $utilizerData->Student_num, 'Grade' => $utilizerData->Grade, 'ParentName' => $utilizerData->Parent_guardian_name, 'ParentEmail' => $utilizerData->Parent_Guardian_Email, 'ParentNumber' => $utilizerData->Parent_phone_number, 'AllocationLog' => $allocation_array]);
         }
         return response()->json(['status' => 'success', 'msg' => $searchResults->values(), 'utilizerlog' => $data_array, 'count' => $totalCount]);
+    }
+
+    function UtilizerExport($sid) {
+        $subQuery = DB::table('students as s')
+                ->leftJoin('student_inventories as si', 'si.Student_ID', '=', 's.ID')
+                ->leftJoin('inventory_management as im1', 'im1.ID', '=', 'si.Inventory_ID')
+                ->leftJoin('inventory_management as im2', 'im2.ID', '=', 'si.Loner_ID')
+                ->select(
+                        's.id as utilizerid',
+                        's.School_ID as schId',
+                        's.Device_user_first_name',
+                        's.Device_user_last_name',
+                        's.Parent_guardian_name',
+                        's.Parent_Guardian_Email',
+                        's.Parent_phone_number',
+                        's.Student_num',
+                        's.Grade',
+                        'im1.Serial_number as inventory_serial_number',
+                        'im2.Serial_number as loner_serial_number',
+                        'im1.ID as inventory_ID',
+                        'im2.ID as loner_ID'
+                )
+                ->where('s.School_ID', $sid);
+
+        $query = DB::table(DB::raw("({$subQuery->toSql()}) as sub"))
+                ->mergeBindings($subQuery)
+                ->select(
+                        'sub.utilizerid',
+                        DB::raw('ANY_VALUE(sub.schId) as schId'),
+                        DB::raw('ANY_VALUE(sub.Device_user_first_name) as Device_user_first_name'),
+                        DB::raw('ANY_VALUE(sub.Device_user_last_name) as Device_user_last_name'),
+                        DB::raw('ANY_VALUE(sub.Parent_guardian_name) as Parent_guardian_name'),
+                        DB::raw('ANY_VALUE(sub.Parent_Guardian_Email) as Parent_Guardian_Email'),
+                        DB::raw('ANY_VALUE(sub.Parent_phone_number) as Parent_phone_number'),
+                        DB::raw('ANY_VALUE(sub.Student_num) as Student_num'),
+                        DB::raw('ANY_VALUE(sub.Grade) as Grade'),
+                        DB::raw('CASE WHEN TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_serial_number, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_serial_number, "")))) = "" THEN null ELSE TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_serial_number, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_serial_number, "")))) END as Serial_number'),
+                        DB::raw('CASE WHEN TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_ID, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_ID, "")))) = "" THEN null ELSE TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_ID, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_ID, "")))) END as Inventory_IDs')
+                )
+                ->groupBy('sub.utilizerid');
+
+        $utilizerData = $query->get();
+
+        $searchResults = $utilizerData->sortByDesc('utilizerid');
+
+//
+        $data_array = array();
+        foreach ($utilizerData as $utilizerData) {
+            $utilizerLog = DeviceAllocationLog::where('School_ID', $sid)->where('Student_ID', $utilizerData->utilizerid)->get();
+            $allocation_array = array();
+            foreach ($utilizerLog as $utilizerLogData) {
+                $device = InventoryManagement::where('ID', $utilizerLogData->Inventory_ID)->first();
+                array_push($allocation_array, ['SerialNum' => $device->Serial_number, 'AllocatedDate' => $utilizerLogData->Allocated_Date, 'LonerDeviceAllocationDate' => $utilizerLogData->Loner_Allocation_Date]);
+            }
+            array_push($data_array, ['StudentName' => $utilizerData->Device_user_first_name . ' ' . $utilizerData->Device_user_last_name, 'Student_num' => $utilizerData->Student_num, 'Grade' => $utilizerData->Grade, 'ParentName' => $utilizerData->Parent_guardian_name, 'ParentEmail' => $utilizerData->Parent_Guardian_Email, 'ParentNumber' => $utilizerData->Parent_phone_number, 'AllocationLog' => $allocation_array]);
+        }
+        return response()->json(['status' => 'success', 'msg' => $searchResults->values(), 'utilizerlog' => $data_array]);
     }
 
 }

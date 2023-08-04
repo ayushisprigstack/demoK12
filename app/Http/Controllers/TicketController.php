@@ -29,6 +29,7 @@ use App\Models\TicketImage;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PartSKUs;
 use App\Models\TicketStatus;
+use Illuminate\Support\Facades\Log;
 class TicketController extends Controller {
 
     public function allIssue() {
@@ -40,155 +41,148 @@ class TicketController extends Controller {
         ]));
     }
 
-   function importTickets(Request $request)
-    {
+    function importTickets(Request $request) {
 //        try {
-            $userId = $request->input('ID');
-            $schId = $request->input('schId');
-            $result = $request->file('file');
-            $file = fopen($result, 'r');
-            $header = fgetcsv($file);
-            $escapedheader = [];
-            $expectedHeaders = [];       
-            $expectedHeaders = ['ticketnumber','serialnumber','notes','issueoptional','attachedpartsoptional','partpriceoptional','quantityoptional','partnoteoptional','fromschoolinventoryoptional','ticketstatus'];          
-            $escapedheader = [];
-            foreach ($header as $key => $value) {
-                $lheader = strtolower($value);
-                $escapedItem = preg_replace('/[^a-z]/', '', $lheader);
-                array_push($escapedheader, $escapedItem);
+        $userId = $request->input('ID');
+        $schId = $request->input('schId');
+        $result = $request->file('file');
+        $file = fopen($result, 'r');
+        $header = fgetcsv($file);
+        $escapedheader = [];
+        $expectedHeaders = [];
+        $expectedHeaders = ['ticketnumber', 'serialnumber', 'notes', 'issueoptional', 'attachedpartsoptional', 'partpriceoptional', 'quantityoptional', 'partnoteoptional', 'fromschoolinventoryoptional', 'ticketstatus'];
+        $escapedheader = [];
+        foreach ($header as $key => $value) {
+            $lheader = strtolower($value);
+            $escapedItem = preg_replace('/[^a-z]/', '', $lheader);
+            array_push($escapedheader, $escapedItem);
+        }
+        if (array_diff($expectedHeaders, $escapedheader)) {
+            return 'Invalid CSV';
+        }
+
+        while ($columns = fgetcsv($file)) {
+            if ($columns[0] == "") {
+                continue;
             }
-            if (array_diff($expectedHeaders, $escapedheader)) {
-            return 'Invalid CSV' ;
-           }
-           
-            while ($columns = fgetcsv($file)) {
-                if ($columns[0] == "") {
-                    continue;
-                }
 
-                foreach ($columns as $key => &$value) {
-                    $value;
-                }
+            foreach ($columns as $key => &$value) {
+                $value;
+            }
 
-                $data = array_combine($escapedheader, $columns);               
-                $TicketNum = $data['ticketnumber'];
-                $SerialNum = $data['serialnumber'];
-                $Note = $data['notes'];
-                $Issue=$data['issueoptional'] ?? null;
-                $AttachedPart=$data['attachedpartsoptional'] ;
-                $PartPrice=$data['partpriceoptional'] ?? null;
-                $PartQuantity=$data['quantityoptional'] ?? null;
-                $PartNotes=$data['partnoteoptional']?? null;
-                $IsAMasterPart=$data['fromschoolinventoryoptional'];
-                $Status=$data['ticketstatus'];
-                $AttachPartExplode = explode(',', $AttachedPart);
-                $NumofAttachedPart = count($AttachPartExplode);
-                $IsAMasterPartExploed = explode(',', $IsAMasterPart);
-                $NumofIsAMasterPart = count($IsAMasterPartExploed);
-                $PartPriceExploed = explode(',', $PartPrice);
-                $PartQuantity = explode(',', $PartQuantity);
-                $PartNoteExploed = explode(',', $PartNotes);
-               
-                //inventory id 
-                $inventoryData = InventoryManagement::where('school_id', $schId)->where('Serial_number',$SerialNum)->first();
-                //ticket aa invetory generate issue 
-               
-                if (isset($inventoryData)) {
-                    $ticketdata = Ticket::where('inventory_id', $inventoryData['ID'])->whereIn('ticket_status', [1, 3, 4, 5, 6])->pluck('ticket_status');
-                    $count = count($ticketdata); 
-                    if ($count < 1) {
-                        $ticket = new Ticket();
-                        $ticket->school_id = $schId;
-                        $ticket->user_id = $userId;
-                        $ticket->inventory_id = $inventoryData->ID;
-                        $ticket->notes = $Note;
-                        $ticketStatus =  TicketStatus::where('status',$Status)->first();                     
-                        $ticketStatusID = $ticketStatus ? $ticketStatus->ID : 1;
-                        $ticket->ticket_status = $ticketStatusID;
-                        $ticket->ticket_num = $TicketNum;                
-                        $ticket->save();
-                        
-                       $issues = explode(',', $Issue);
-                        foreach ($issues as $issue){   
-                          $issue = trim($issue);
-                          $deviceIssue = DeviceIssue::where('issue', $issue)->first();
-                          $issueId = $deviceIssue ? $deviceIssue->ID : 8;                         
-                          $ticketIssue = new TicketIssue();
-                          $ticketIssue->ticket_Id = $ticket->id;
-                          $ticketIssue->issue_Id = $issueId; // Replace 8 with the correct issue ID
-                          $ticketIssue->user_id = $userId;
-                          $ticketIssue->inventory_id = $inventoryData->ID;                         
-                          $ticketIssue->save();                          
-                        }
-                    if($AttachedPart !== ''){
-                    if($NumofIsAMasterPart == $NumofAttachedPart){
-                        
-                     for ($i = 0; $i < $NumofAttachedPart; $i++) {
-                     $isAMasterPart = trim($IsAMasterPartExploed[$i]);                     
-                     $attachedPart = isset($AttachPartExplode[$i]) ? trim($AttachPartExplode[$i]) : '';                   
-                     $Quantity = trim($PartQuantity[$i]);
-                     $Notes = trim($PartNoteExploed[$i]);
-                     $Price = trim($PartPriceExploed[$i]); 
-                     $flag = 0;
-                     if($isAMasterPart === 'yes' || $isAMasterPart === 'Yes' || $isAMasterPart === 'YES') 
-                     {                         
-                        $PartData = PartSKUs::where('School_ID',$schId)->where('handle', 'LIKE', '%' . $attachedPart . '%')->first();                                                                 
-                        $flag = 0;
-                        
-                     }else                 
-                    {
-                       $PartData = PartSKUs::where('School_ID',null)->where('handle', 'LIKE', '%' . $attachedPart . '%')->first();                        
-                       $flag = 1;
-                       
+            $data = array_combine($escapedheader, $columns);
+            $TicketNum = $data['ticketnumber'];
+            $SerialNum = $data['serialnumber'];
+            $Note = $data['notes'];
+            $Issue = $data['issueoptional'] ?? null;
+            $AttachedPart = $data['attachedpartsoptional'];
+            $PartPrice = $data['partpriceoptional'] ?? null;
+            $PartQuantity = $data['quantityoptional'] ?? null;
+            $PartNotes = $data['partnoteoptional'] ?? null;
+            $IsAMasterPart = $data['fromschoolinventoryoptional'];
+            $Status = $data['ticketstatus'];
+            $AttachPartExplode = explode(',', $AttachedPart);
+            $NumofAttachedPart = count($AttachPartExplode);
+            $IsAMasterPartExploed = explode(',', $IsAMasterPart);
+            $NumofIsAMasterPart = count($IsAMasterPartExploed);
+            $PartPriceExploed = explode(',', $PartPrice);
+            $PartQuantity = explode(',', $PartQuantity);
+            $PartNoteExploed = explode(',', $PartNotes);
+
+            //inventory id 
+            $inventoryData = InventoryManagement::where('school_id', $schId)->where('Serial_number', $SerialNum)->first();
+            //ticket aa invetory generate issue 
+
+            if (isset($inventoryData)) {
+                $ticketdata = Ticket::where('inventory_id', $inventoryData['ID'])->whereIn('ticket_status', [1, 3, 4, 5, 6])->pluck('ticket_status');
+                $count = count($ticketdata);
+                if ($count < 1) {
+                    $ticket = new Ticket();
+                    $ticket->school_id = $schId;
+                    $ticket->user_id = $userId;
+                    $ticket->inventory_id = $inventoryData->ID;
+                    $ticket->notes = $Note;
+                    $ticketStatus = TicketStatus::where('status', $Status)->first();
+                    $ticketStatusID = $ticketStatus ? $ticketStatus->ID : 1;
+                    $ticket->ticket_status = $ticketStatusID;
+                    $ticket->ticket_num = $TicketNum;
+                    $ticket->save();
+
+                    $issues = explode(',', $Issue);
+                    foreach ($issues as $issue) {
+                        $issue = trim($issue);
+                        $deviceIssue = DeviceIssue::where('issue', $issue)->first();
+                        $issueId = $deviceIssue ? $deviceIssue->ID : 8;
+                        $ticketIssue = new TicketIssue();
+                        $ticketIssue->ticket_Id = $ticket->id;
+                        $ticketIssue->issue_Id = $issueId; // Replace 8 with the correct issue ID
+                        $ticketIssue->user_id = $userId;
+                        $ticketIssue->inventory_id = $inventoryData->ID;
+                        $ticketIssue->save();
                     }
-                    if(isset($PartData->ID)){
-                    $ticketAttachment = new TicketsAttachment;
-                    $ticketAttachment->School_ID = $schId;
-                    $ticketAttachment->Ticket_ID = $ticket->id;
-                    $ticketAttachment->Parts_ID = $PartData->ID;
-                    $ticketAttachment->Parts_Notes = $Notes;
-                    $ticketAttachment->Quantity = $Quantity; 
-                    $ticketAttachment->Parts_Price = $Price;
-                    $ticketAttachment->Original_Price = $PartData->Variant_Price;
-                    $ticketAttachment->Parts_Flag = $flag;
-                    $ticketAttachment->save();
-                    if($flag == 1){
-                        $partFinalQuantity = $PartData->Quantity - $Quantity;
-                        PartSKUs::where('ID',$PartData->ID)->update(['Quantity'=>$partFinalQuantity]); 
-                    }                   
-                    }                    
-                    }   
-    
-                       }
-                    }   
+                    if ($AttachedPart !== '') {
+                        if ($NumofIsAMasterPart == $NumofAttachedPart) {
+
+                            for ($i = 0; $i < $NumofAttachedPart; $i++) {
+                                $isAMasterPart = trim($IsAMasterPartExploed[$i]);
+                                $attachedPart = isset($AttachPartExplode[$i]) ? trim($AttachPartExplode[$i]) : '';
+                                $Quantity = trim($PartQuantity[$i]);
+                                $Notes = trim($PartNoteExploed[$i]);
+                                $Price = trim($PartPriceExploed[$i]);
+                                $flag = 0;
+                                if ($isAMasterPart === 'yes' || $isAMasterPart === 'Yes' || $isAMasterPart === 'YES') {
+                                    $PartData = PartSKUs::where('School_ID', $schId)->where('handle', 'LIKE', '%' . $attachedPart . '%')->first();
+                                    $flag = 0;
+                                } else {
+                                    $PartData = PartSKUs::where('School_ID', null)->where('handle', 'LIKE', '%' . $attachedPart . '%')->first();
+                                    $flag = 1;
+                                }
+                                if (isset($PartData->ID)) {
+                                    $ticketAttachment = new TicketsAttachment;
+                                    $ticketAttachment->School_ID = $schId;
+                                    $ticketAttachment->Ticket_ID = $ticket->id;
+                                    $ticketAttachment->Parts_ID = $PartData->ID;
+                                    $ticketAttachment->Parts_Notes = $Notes;
+                                    $ticketAttachment->Quantity = $Quantity;
+                                    $ticketAttachment->Parts_Price = $Price;
+                                    $ticketAttachment->Original_Price = $PartData->Variant_Price;
+                                    $ticketAttachment->Parts_Flag = $flag;
+                                    $ticketAttachment->save();
+                                    if ($flag == 1) {
+                                        $partFinalQuantity = $PartData->Quantity - $Quantity;
+                                        PartSKUs::where('ID', $PartData->ID)->update(['Quantity' => $partFinalQuantity]);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            
+
 //        } catch (\Throwable $th) {
 //            return "Something Went Wrong";
 //        }
-    }
-    return "success";
+        }
+        return "success";
     }
 
-    function exportTickets($sid){
-     $data = Ticket::with('inventoryManagement.studentInventory', 'ticketIssues')
-                ->where('school_id',$sid)
-                ->get();   
-       $data->each(function ($ticket) {
-           $ticket->Status = $ticket->statusname->status ?? null;
+    function exportTickets($sid) {
+        $data = Ticket::with('inventoryManagement.studentInventory', 'ticketIssues')
+                ->where('school_id', $sid)
+                ->get();
+        $data->each(function ($ticket) {
+            $ticket->Status = $ticket->statusname->status ?? null;
             $inventoryManagement = $ticket->inventoryManagement;
             $studentInventory = $inventoryManagement->studentInventory;
             $ticket->SerialNum = $inventoryManagement->Serial_number ?? null;
-            $ticket->Student =  $studentInventory?->student?->Device_user_first_name . ' ' . $studentInventory?->student?->Device_user_last_name ?? null;
+            $ticket->Student = $studentInventory?->student?->Device_user_first_name . ' ' . $studentInventory?->student?->Device_user_last_name ?? null;
             $ticket->TicketCreatedBy = $ticket->user->first_name . ' ' . $ticket->user->last_name ?? null;
-            
-       });
-      
-     $data->makeHidden(['inventoryManagement','ticketIssues','statusname','created_at','updated_at','user']);
-     return $data;
+        });
+
+        $data->makeHidden(['inventoryManagement', 'ticketIssues', 'statusname', 'created_at', 'updated_at', 'user']);
+        return $data;
     }
-    
+
     public function generateIssue(Request $request) {
         $msg = $request->input('msg');
         $devicearray = $request->input('DeviceIssueArray');
@@ -241,23 +235,27 @@ class TicketController extends Controller {
                         $TicketImg->Img = $filePath;
                         $TicketImg->save();
                     }
- 
+
 //mail send 
                     $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
                     $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
                     $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
-                   
-                    foreach ($ccRecipients as $recipent) {                      
+
+                    foreach ($ccRecipients as $recipent) {
                         $staffmember = User::where('id', $recipent)->first();
-                          $data = [
-                        'name' => $staffmember->first_name . '' . $staffmember->last_name,
-                        'device' => $inventory->Serial_number,
-                        'school_name' => $schoolname->name,
-                        'ticketnum'=>$ticket->ticket_num,
-                        'ticketnote'=>$ticket->notes,
-                        'ticketcreateddate'=>$ticket->created_at->format('m-d-y'),    
-                    ];
-                        Mail::to($staffmember->email)->send(new CreateTicketMailer($data));
+                        $data = [
+                            'name' => $staffmember->first_name . '' . $staffmember->last_name,
+                            'device' => $inventory->Serial_number,
+                            'school_name' => $schoolname->name,
+                            'ticketnum' => $ticket->ticket_num,
+                            'ticketnote' => $ticket->notes,
+                            'ticketcreateddate' => $ticket->created_at->format('m-d-y'),
+                        ];
+                   try {
+                            Mail::to($staffmember->email)->send(new CreateTicketMailer($data));
+                        } catch (\Exception $e) {
+                            Log::error("Mail sending failed: " . $e->getMessage());
+                        }
                     }
                 } else {
                     return "Ticket already generated";
@@ -295,25 +293,29 @@ class TicketController extends Controller {
                     $TicketImg->Img = $filePath;
                     $TicketImg->save();
                 }
-           
+
                 // mail send   
-                    $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
-                    $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
-                    $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
-                   
-                    foreach ($ccRecipients as $recipent) {                      
-                        $staffmember = User::where('id', $recipent)->first();
-                         $data = [
+                $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
+                $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
+                $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
+
+                foreach ($ccRecipients as $recipent) {
+                    $staffmember = User::where('id', $recipent)->first();
+                    $data = [
                         'name' => $staffmember->first_name . '' . $staffmember->last_name,
                         'device' => $inventory->Serial_number,
                         'school_name' => $schoolname->name,
-                        'ticketnum'=>$ticket->ticket_num,
-                        'ticketnote'=>$ticket->notes,
-                        'ticketcreateddate'=>$ticket->created_at->format('m-d-y'),    
+                        'ticketnum' => $ticket->ticket_num,
+                        'ticketnote' => $ticket->notes,
+                        'ticketcreateddate' => $ticket->created_at->format('m-d-y'),
                     ];
+                    try {
                         Mail::to($staffmember->email)->send(new CreateTicketMailer($data));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
                     }
-                    }
+                }
+            }
 
             if ($msg['lonerDeviceStatus'] == 1) {
 
@@ -378,97 +380,95 @@ class TicketController extends Controller {
         $studentdata = $studentinventory ? $studentinventory->student : null;
         $studentId = $studentdata ? $studentdata->ID : null;
         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-        $ticketExists = Ticket::where('inventory_id', $msg['inventoryId'])->whereIn('ticket_status', [1, 3, 4, 5, 6, 9, 10])->exists();      
+        $ticketExists = Ticket::where('inventory_id', $msg['inventoryId'])->whereIn('ticket_status', [1, 3, 4, 5, 6, 9, 10])->exists();
         //add ticket
-        if($request->input('TicketID') == 0){
-                       if ($ticketExists) {
-            return "Ticket already generated";
-        } else {
-            $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-            $ticket = new Ticket();
-            $ticket->school_id = $msg['schoolId'];
-            $ticket->user_id = $msg['userId'];
-            $ticket->inventory_id = $msg['inventoryId'];
-            $ticket->notes = $msg['Notes'];
-            $ticket->ticket_status = 1;
-            $ticket->ticket_num = $randomString;
-            $ticket->save();
+        if ($request->input('TicketID') == 0) {
+            if ($ticketExists) {
+                return "Ticket already generated";
+            } else {
+                $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+                $ticket = new Ticket();
+                $ticket->school_id = $msg['schoolId'];
+                $ticket->user_id = $msg['userId'];
+                $ticket->inventory_id = $msg['inventoryId'];
+                $ticket->notes = $msg['Notes'];
+                $ticket->ticket_status = 1;
+                $ticket->ticket_num = $randomString;
+                $ticket->save();
 
-            foreach ($devicearray as $devicearraydata) {
-                $Issue = new TicketIssue();
-                $Issue->ticket_Id = $ticket->id;
-                $Issue->issue_Id = $devicearraydata['ID'];
-                $Issue->user_id = $msg['userId'];
-                $Issue->inventory_id = $msg['inventoryId'];
-                $Issue->save();
-            }
+                foreach ($devicearray as $devicearraydata) {
+                    $Issue = new TicketIssue();
+                    $Issue->ticket_Id = $ticket->id;
+                    $Issue->issue_Id = $devicearraydata['ID'];
+                    $Issue->user_id = $msg['userId'];
+                    $Issue->inventory_id = $msg['inventoryId'];
+                    $Issue->save();
+                }
 
-            $count = 0;
-            foreach ($imgarray as $img) {
-                $count += 1;
-                $file = $img['Img'];
-                $name = $count . 'img';
-                $filePath = 'Tickets/' . $ticket->id . '/' . $name;
-                Storage::disk('s3')->put($filePath, file_get_contents($file));
+                $count = 0;
+                foreach ($imgarray as $img) {
+                    $count += 1;
+                    $file = $img['Img'];
+                    $name = $count . 'img';
+                    $filePath = 'Tickets/' . $ticket->id . '/' . $name;
+                    Storage::disk('s3')->put($filePath, file_get_contents($file));
 
-                $TicketImg = new TicketImage();
-                $TicketImg->Ticket_ID = $ticket->id;
-                $TicketImg->Img = $filePath;
-                $TicketImg->save();
-            }
+                    $TicketImg = new TicketImage();
+                    $TicketImg->Ticket_ID = $ticket->id;
+                    $TicketImg->Img = $filePath;
+                    $TicketImg->save();
+                }
 
-            if ($msg['lonerDeviceStatus'] == 1) {
-                $studentinventorydata = StudentInventory::where('Inventory_Id', $msg['inventoryId'])->first();
-                if (isset($studentinventorydata)) {
-                    StudentInventory::where('Inventory_Id', $msg['inventoryId'])->update(['Loner_ID' => $msg['lonerId']]);
-                    if (isset($msg['lonerId'])) {
+                if ($msg['lonerDeviceStatus'] == 1) {
+                    $studentinventorydata = StudentInventory::where('Inventory_Id', $msg['inventoryId'])->first();
+                    if (isset($studentinventorydata)) {
+                        StudentInventory::where('Inventory_Id', $msg['inventoryId'])->update(['Loner_ID' => $msg['lonerId']]);
+                        if (isset($msg['lonerId'])) {
+                            $deviceAllocationLog = new DeviceAllocationLog;
+                            $deviceAllocationLog->Inventory_ID = $msg['lonerId'];
+                            $deviceAllocationLog->Student_ID = $studentId;
+                            $deviceAllocationLog->School_ID = $msg['schoolId'];
+                            $deviceAllocationLog->Allocated_Date = date("Y-m-d");
+                            $checkLonerdevice = InventoryManagement::where('ID', $msg['lonerId'])->first();
+                            if ($checkLonerdevice->Loaner_device == 1) {
+                                $deviceAllocationLog->Loner_Allocation_Date = date("Y-m-d");
+                                $deviceAllocationLog->save();
+                            }
+                            $deviceAllocationLog->save();
+                        }
+                    } else {
+                        $studentInventory = new StudentInventory();
+                        $studentInventory->Student_ID = $studentId;
+                        $studentInventory->Inventory_Id = $msg['inventoryId'];
+                        $studentInventory->Loner_ID = $msg['lonerId'];
+                        $studentInventory->save();
+
                         $deviceAllocationLog = new DeviceAllocationLog;
-                        $deviceAllocationLog->Inventory_ID = $msg['lonerId'];
+                        $deviceAllocationLog->Inventory_ID = $msg['inventoryId'];
                         $deviceAllocationLog->Student_ID = $studentId;
                         $deviceAllocationLog->School_ID = $msg['schoolId'];
                         $deviceAllocationLog->Allocated_Date = date("Y-m-d");
-                        $checkLonerdevice = InventoryManagement::where('ID', $msg['lonerId'])->first();
+                        $checkLonerdevice = InventoryManagement::where('ID', $msg['inventoryId'])->first();
                         if ($checkLonerdevice->Loaner_device == 1) {
                             $deviceAllocationLog->Loner_Allocation_Date = date("Y-m-d");
                             $deviceAllocationLog->save();
                         }
                         $deviceAllocationLog->save();
                     }
+
+                    $lonerdevicelog = new LonerDeviceLog();
+                    $lonerdevicelog->Student_ID = $studentId;
+                    $lonerdevicelog->Loner_ID = $msg['lonerId'];
+                    $lonerdevicelog->Start_date = now()->format('Y-m-d');
+                    $lonerdevicelog->save();
+                    return "success";
                 } else {
-                    $studentInventory = new StudentInventory();
-                    $studentInventory->Student_ID = $studentId;
-                    $studentInventory->Inventory_Id = $msg['inventoryId'];
-                    $studentInventory->Loner_ID = $msg['lonerId'];
-                    $studentInventory->save();
-
-                    $deviceAllocationLog = new DeviceAllocationLog;
-                    $deviceAllocationLog->Inventory_ID = $msg['inventoryId'];
-                    $deviceAllocationLog->Student_ID = $studentId;
-                    $deviceAllocationLog->School_ID = $msg['schoolId'];
-                    $deviceAllocationLog->Allocated_Date = date("Y-m-d");
-                    $checkLonerdevice = InventoryManagement::where('ID', $msg['inventoryId'])->first();
-                    if ($checkLonerdevice->Loaner_device == 1) {
-                        $deviceAllocationLog->Loner_Allocation_Date = date("Y-m-d");
-                        $deviceAllocationLog->save();
-                    }
-                    $deviceAllocationLog->save();
+                    return "success";
                 }
-
-                $lonerdevicelog = new LonerDeviceLog();
-                $lonerdevicelog->Student_ID = $studentId;
-                $lonerdevicelog->Loner_ID = $msg['lonerId'];
-                $lonerdevicelog->Start_date = now()->format('Y-m-d');
-                $lonerdevicelog->save();
-                return "success";
-            } else {
-                return "success";
             }
-        } 
-        }else//edit ticket
-        {
+        } else {//edit ticket
             
         }
-        
     }
-  
+
 }

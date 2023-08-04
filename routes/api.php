@@ -55,7 +55,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //testing here for github 
 
 
-Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}&{page}',[ManageTicketController::class, 'Tickets']);
+Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class, 'Tickets']);
 Route::get('/menuAccess/{uid}', [LoginController::class, 'menuAccess']);
 Route::post('/register',[LoginController::class,'register']);
 Route::post('/addUsers',[LoginController::class,'addUsers']);
@@ -104,7 +104,7 @@ Route::get('/allAccess',[StaffMemberController::class,'allAccess']);
 Route::get('/getUserById/{uid?}',[StaffMemberController::class,'updateUserData']);
 Route::post('/deleteUser/{id}&{flag}', [StaffMemberController::class, 'deleteUser']);
 Route::post('/addUpdateUser', [StaffMemberController::class, 'addUpdateUser']);
-
+Route::get('/UtilizerExport/{sid}',[UtilizerController::class,'UtilizerExport']);
 
 //Utilizer 
 Route::get('/allUtilizer/{sid}&{skey}',[UtilizerController::class,'allUtilizer']);

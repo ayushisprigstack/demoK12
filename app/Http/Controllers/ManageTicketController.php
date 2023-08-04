@@ -41,6 +41,8 @@ use App\Models\DamageType;
 use App\Models\SchoolBatchLog;
 use App\Models\SchoolBatch;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
+
 class ManageTicketController extends Controller {
 
     function allTickets($sid, $uid) {
@@ -555,9 +557,13 @@ class ManageTicketController extends Controller {
                     'school_name' => $schoolname->name
                 ];
                  foreach ($ccRecipients as $recipent) {
-                        $staffmember = User::where('id', $recipent)->first();
+                    $staffmember = User::where('id', $recipent)->first();                  
+                    try {
                         Mail::to($staffmember->email)->send(new ReorderPartsMailer($data));
-                    }            
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
+                    }
+                }
             }
         }
         //end   

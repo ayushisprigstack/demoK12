@@ -41,7 +41,7 @@ use App\Models\TechnicianLocation;
 use App\Models\MenuAccess;
 use App\Models\Menu;
 use App\Models\LoginAsSchoolAdminLog;
-
+use Illuminate\Support\Facades\Log;
 class AddTechnicianController extends Controller {
 
     function addUpdateK12User(Request $request) {
@@ -137,8 +137,12 @@ class AddTechnicianController extends Controller {
                     'email' => $K12user->email,
                     'accessType' => $accessType->access_type
                 ];
-
-                Mail::to($K12user->email)->send(new AddK12UserMailer($data));
+                    try {
+                        Mail::to($K12user->email)->send(new AddK12UserMailer($data));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
+                    }
+               
 
                 return Response::json(array(
                             'status' => "success",
@@ -153,7 +157,6 @@ class AddTechnicianController extends Controller {
 
     function allK12User($skey, $sortbykey, $sortbyflag) {
         if ($skey == 'null') {
-
             $k12users = K12User::query();
         } else {
             $k12users = K12User::where(function ($query) use ($skey) {
