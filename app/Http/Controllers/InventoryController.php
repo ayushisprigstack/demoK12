@@ -542,7 +542,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
         $inventory->orderByDesc('inventory_management.ID');
     } 
      $data = $inventory->get();     
-     $data = $inventory->paginate(15, ['*'], 'page',$page);
+     $data = $inventory->paginate(30, ['*'], 'page',$page);
         return response()->json(
                         collect([
                     'response' => 'success',

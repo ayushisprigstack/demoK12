@@ -334,7 +334,7 @@ class UtilizerController extends Controller {
         }
 
         $totalCount = $query->get()->count();
-        $utilizerData = $query->paginate(15, ['*'], 'page', $page);
+        $utilizerData = $query->paginate(30, ['*'], 'page', $page);
         $collection = $utilizerData->getCollection();
         $searchResults = $collection;
 
@@ -402,7 +402,6 @@ class UtilizerController extends Controller {
         $utilizerData = $query->get();
 
         $searchResults = $utilizerData->sortByDesc('utilizerid');
-
 //
         $data_array = array();
         foreach ($utilizerData as $utilizerData) {
