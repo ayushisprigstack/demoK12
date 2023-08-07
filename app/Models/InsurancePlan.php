@@ -14,4 +14,19 @@ class InsurancePlan extends Model
     use HasApiTokens, HasFactory, Notifiable;
     protected $table="insurance_plans";
      
+     public function coverdDeviceModels() {
+        return $this->hasMany(CoverdDeviceModelLog::class, 'PlanID', 'ID');   
+    }
+    
+     public function coverdServices() {
+        return $this->hasMany(CoverdServiceLog::class, 'PlanID', 'ID');   
+    }
+    
+      public function school() {
+        return $this->belongsTo(School::class, 'SchoolID', 'ID');
+    }
+    public function coverdServicesNames() {
+        return $this->hasMany(CoverdServiceLog::class, 'PlanID')->with('services:id,Name');
+    }
+
 }

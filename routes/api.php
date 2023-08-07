@@ -274,3 +274,7 @@ Route::post('/createShipment', [FedexController::class, 'createShipment']);
 //insurance
 Route::post('/AddInsurancePlan', [AdminInsurancePlanController::class, 'AddInsurancePlan']);
 Route::get('/getAllOtherProducts', [AdminInsurancePlanController::class, 'getAllOtherProducts']);
+Route::get('/getAllPlans/{sid}', [AdminInsurancePlanController::class, 'getAllPlans']);
+Route::get('/getPlanById/{pid}', [AdminInsurancePlanController::class, 'getPlanById']);
+Route::get('/getAllPlanForAdmin/{sid}', [AdminInsurancePlanController::class, 'getAllPlanForAdmin']);
+Route::post('/setPlanServicesPrice', [AdminInsurancePlanController::class, 'setPlanServicesPrice']);

@@ -72,7 +72,12 @@ class StaffMemberController extends Controller {
         } elseif ($skey == 3) {
             $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('email') : $array_allUser->sortBy('email');
         }else{
-            $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('id') : $array_allUser->sortBy('id');
+            if($skey == 'null'){
+               $array_allUser = $array_allUser->sortByDesc('id');
+            }else{
+                $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('id') : $array_allUser->sortBy('id');
+            }
+            
         }
         $final = $array_allUser->values();
         $Access = Access::whereNotIn('ID', [5, 6, 7])->get();

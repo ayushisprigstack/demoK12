@@ -172,8 +172,13 @@ class AddTechnicianController extends Controller {
             $k12users = $k12users->orderBy('access_type', $sortbyflag);
         } elseif ($sortbykey == 3) {
             $k12users = $k12users->orderBy('email', $sortbyflag);
-        } else {
-            $k12users = $k12users->orderBy('ID', $sortbyflag);
+        } else { 
+            if($sortbykey == 'null'){
+              $k12users = $k12users->orderBy('ID','asc');  
+            }  else{
+                  $k12users = $k12users->orderBy('ID', $sortbyflag);
+            }           
+          
         }
 
         $k12users = $k12users->get();
