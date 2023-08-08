@@ -24,5 +24,9 @@ class School extends Model {
     public function tickets() {
         return $this->hasMany(Ticket::class, 'school_id');
     }
+    
+     public function logo() {
+    return $this->hasOne(Logo::class, 'School_ID', 'ID');
+}
 
 }

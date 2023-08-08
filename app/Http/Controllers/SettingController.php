@@ -26,6 +26,8 @@ use App\Models\SignUpCcSetting;
 use App\Models\LoginAsSchoolAdminLog;
 use App\Models\SchoolAddress;
 use App\Models\Location;
+use App\Models\AdminCorporateStaffCcSetting;
+use App\Models\SchoolParentalCoverageCcSetting;
 class SettingController extends Controller
 {
 
@@ -115,7 +117,9 @@ class SettingController extends Controller
         $InvoicesArray = array();
         $notificationArray = array();
         $SignupUsersArray = array();
-
+        $AdminSideInsuranceArray = array();
+        $SchoolSideInsuranceArray = array();
+        
         $getTicket = TicketCcSetting::where('School_ID', $sid)->get();
         foreach ($getTicket as $ticketData) {
             $ticketuser = User::where('id', $ticketData->UserID)->first();
@@ -162,6 +166,18 @@ class SettingController extends Controller
             $signupuser = User::where('id', $signupdata->UserID)->first();
             array_push($SignupUsersArray, ['emailid' => $signupuser->id, 'email' => $signupuser->email]);
         }
+        
+        $getadminSideInsuranceStaffs = AdminCorporateStaffCcSetting::all();
+        foreach($getadminSideInsuranceStaffs  as  $getadminSideInsuranceStaffdata){
+            $staffuser = User::where('id', $getadminSideInsuranceStaffdata->UserID)->first();
+            array_push($AdminSideInsuranceArray, ['emailid' => $staffuser->id, 'email' => $staffuser->email]);
+        }
+        
+        $getSchoolParentalCoverageCcs =  SchoolParentalCoverageCcSetting::where('SchoolID',$sid)->get();
+         foreach($getSchoolParentalCoverageCcs  as  $getSchoolParentalCoverageData){
+            $schoolcoverageuser = User::where('id', $getSchoolParentalCoverageData->UserID)->first();
+            array_push($SchoolSideInsuranceArray, ['emailid' => $schoolcoverageuser->id, 'email' => $schoolcoverageuser->email]);
+        }
 
         if ($flag == 1) {
             $notificationArray[] = [
@@ -186,6 +202,11 @@ class SettingController extends Controller
                 'Name' => 'Invoice Notification Emails',
                 'emails' => $InvoicesArray
             ];
+             $notificationArray[] = [
+                'Id' => 8,
+                'Name' => 'Parental Coverage Notification Emails',
+                'emails' => $SchoolSideInsuranceArray
+            ];
         } else {
             $notificationArray[] = [
                 'Id' => 3,
@@ -196,6 +217,11 @@ class SettingController extends Controller
                 'Id' => 6,
                 'Name' => 'Signup Users Notification Emails',
                 'emails' => $SignupUsersArray
+            ];
+            $notificationArray[] = [
+                'Id' => 7,
+                'Name' => 'Insurance Plan Notification Emails',
+                'emails' => $AdminSideInsuranceArray
             ];
         }
 
@@ -247,7 +273,22 @@ class SettingController extends Controller
             } else {
                 $UserData = User::whereIn('access_type', [5])->whereNotIn('id', $signup)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
             }
+        } else if($id == 7){
+            $corporateStaff = AdminCorporateStaffCcSetting::where('School_ID', $sid)->pluck('UserID');
+            if($skey == 'null'){
+                $UserData = $query->whereNotIn('id',$corporateStaff)->get(['id', 'email']);
+            }else{
+                 $UserData = $query->whereNotIn('id',$corporateStaff)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
+            }
+        } else if($id == 8){
+            $schoolParentalcoverage = SchoolParentalCoverageCcSetting::where('SchoolID', $sid)->pluck('UserID');
+            if($skey == 'null'){
+                $UserData = $query->whereNotIn('id',$schoolParentalcoverage)->get(['id', 'email']);
+            }else{
+                 $UserData = $query->whereNotIn('id',$schoolParentalcoverage)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
+            }
         }
+        
         return Response::json(['msg' => $UserData]) ?? null;
     }
 
@@ -333,6 +374,31 @@ function SaveEmails(Request $request)
                     }
                 }
             }
+        } else if($flag == 7){
+            foreach ($emails as $email) {
+                $user = User::where('id', $email['id'])->first();
+                if ($user) {
+                    $existingadminStaffCcSetting = AdminCorporateStaffCcSetting::where('UserID', $user->id)->first();
+                    if (!$existingadminStaffCcSetting) {
+                        $corporatestaffccsetting = new AdminCorporateStaffCcSetting();
+                        $corporatestaffccsetting->UserID = $user->id;
+                        $corporatestaffccsetting->save();
+                    }
+                }
+            }
+        } else if($flag == 8){
+            foreach ($emails as $email) {
+                $user = User::where('id', $email['id'])->first();
+                if ($user) {
+                    $existingSchoolParentalCCcSetting = SchoolParentalCoverageCcSetting::where('UserID', $user->id)->first();
+                    if (!$existingSchoolParentalCCcSetting) {
+                        $corporatestaffccsetting = new SchoolParentalCoverageCcSetting();
+                        $corporatestaffccsetting->UserID = $user->id;
+                        $corporatestaffccsetting->SchoolID = $user->school_id;
+                        $corporatestaffccsetting->save();
+                    }
+                }
+            }
         }
         return "success";
     }
@@ -340,15 +406,21 @@ function SaveEmails(Request $request)
     function deleteEmail($id, $flag)
     {
         if ($flag == 1) {
-            $ticketccsetting = TicketCcSetting::where('UserID', $id)->delete();
+            $ticketccsetting = TicketCcSetting::where('UserID', $id)->forcedelete();
         } else if ($flag == 2) {
-            $ticketccsetting = InventoryCcSetting::where('UserID', $id)->delete();
+            $ticketccsetting = InventoryCcSetting::where('UserID', $id)->forcedelete();
         } else if ($flag == 3) {
-            $ticketccsetting = IncomingOutgoingBatchNotification::where('UserID', $id)->where('BatchType', 1)->delete();
+            $ticketccsetting = IncomingOutgoingBatchNotification::where('UserID', $id)->where('BatchType', 1)->forcedelete();
         } else if ($flag == 4) {
-            $ticketccsetting = IncomingOutgoingBatchNotification::where('UserID', $id)->where('BatchType', 2)->delete();
+            $ticketccsetting = IncomingOutgoingBatchNotification::where('UserID', $id)->where('BatchType', 2)->forcedelete();
         } else if ($flag == 5) {
-            $ticketccsetting = InvoiceCcSetting::where('UserID', $id)->delete();
+            $ticketccsetting = InvoiceCcSetting::where('UserID', $id)->forcedelete();
+        } else if($flag == 6){
+            $ticketccsetting = SignUpCcSetting::where('UserID', $id)->forcedelete();
+        }else if($flag == 7){
+            $ticketccsetting = AdminCorporateStaffCcSetting::where('UserID', $id)->forcedelete();
+        }else if($flag == 8){
+            $ticketccsetting = SchoolParentalCoverageCcSetting::where('UserID', $id)->forcedelete();
         }
         return "success";
     }

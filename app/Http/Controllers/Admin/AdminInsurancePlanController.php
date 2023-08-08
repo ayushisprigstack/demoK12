@@ -31,9 +31,7 @@ use App\Models\CloseTicketBatch;
 use PDF;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\InvoiceMailer;
-use App\Mail\AdminToSchoolMailer;
-use App\Mail\AdminToSchoolPaymentFailMailer;
+use App\Mail\SchoolSideParentalCoverageMailer;
 use App\Models\InvoiceLog;
 use App\Models\PartSKUs;
 use Dompdf\Dompdf;
@@ -46,7 +44,9 @@ use App\Models\InsurancePlan;
 use App\Models\ProductsForInsurancePlan;
 use App\Models\CoverdServiceLog;
 use App\Models\CoverdDeviceModelLog;
-
+use App\Models\SchoolParentalCoverageCcSetting;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 class AdminInsurancePlanController extends Controller {
 
     function AddInsurancePlan(Request $request) {
@@ -59,7 +59,7 @@ class AdminInsurancePlanController extends Controller {
         $prcofDevices = $request->input('PercentOfDevices');
         $deviceModels = $request->input('DeviceModels');
         $otherProductsArray = $request->input('OtherProducts');
-
+        $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
         $insurancePlan = new InsurancePlan;
 
         $insurancePlan->SchoolID = $schoolID;
@@ -69,6 +69,7 @@ class AdminInsurancePlanController extends Controller {
         $insurancePlan->ContactEmail = $contactEmail;
         $insurancePlan->EstimatedEnrollment = $estimatedStudent;
         $insurancePlan->DevicesNotLeaveSchool = $prcofDevices;
+        $insurancePlan->PlanNum = $randomString; 
         $insurancePlan->save();
 
         $deviceModelsnames = explode(',', $deviceModels);
@@ -86,6 +87,8 @@ class AdminInsurancePlanController extends Controller {
             $coverdproduct->save();
         }
         return 'success';
+        
+        
     }
 
     function getAllOtherProducts() {
@@ -95,6 +98,18 @@ class AdminInsurancePlanController extends Controller {
 
     function getAllPlans($sid) {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('SchoolID', $sid)->orderByDesc('ID')->get();
+        foreach ($plan as $data) {
+            if ($data->Status == 'New_Added') {
+                $data->color_code = '#FDFAE4';
+            } elseif ($data->Status == 'Admin_Approve') {
+                $data->color_code = '#EFF4FF';
+            } elseif ($data->Status == 'Live') {
+                $data->color_code = '#E7FEF6';
+            } else {
+                $data->color_code = '#FFD3DD';
+            }
+        }
+
         return $plan;
     }
 
@@ -113,21 +128,30 @@ class AdminInsurancePlanController extends Controller {
 
         $planServices = $allServices->map(function ($service) use ($plan) {
             $used = $plan->coverdServices->pluck('ServiceID')->contains($service->ID);
+            if ($used) {
+                $servicePrice = CoverdServiceLog::where('PlanID', $plan->ID)
+                                ->where('ServiceID', $service->ID)
+                                ->first()
+                        ->Price;
+            } else {
+                $servicePrice = $service->Price;
+            }
             return [
         'ID' => $service->ID,
         'ServiceName' => $service->Name,
+        'Price' => $servicePrice,
         'used' => $used ? 'yes' : 'no',
             ];
         });
 
         $plan->services = $planServices;
-        $plan->makeHidden(['created_at', 'updated_at', 'deleted_at', 'coverdServices']);
+        $plan->makeHidden(['updated_at', 'deleted_at', 'coverdServices']);
 
         return response()->json($plan);
     }
-    
+
     function setPlanServicesPrice(Request $request){
-         $schoolID = $request->input('SchoolId');
+        $schoolID = $request->input('SchoolId');
         $planID = $request->input('PlanId');
         $servicesArray = $request->input('Services');
         foreach ($servicesArray as $service) {
@@ -141,11 +165,44 @@ class AdminInsurancePlanController extends Controller {
                 $coverdproduct->Price = $service['price'];
                 $coverdproduct->save();
             }
-        }
-        
+            $totalPrice = CoverdServiceLog::where('PlanID', $planID)->sum('Price');
+            InsurancePlan::where('ID',$planID)->update(['Price'=>$totalPrice,'Status'=>'Admin_Approve']);
+        }          
         return  'success';
     }
     
-   
+    function confirmPlan(Request $request) {
+        $schoolName = $request->input('SchoolName');
+        $formattedSchoolName = strtolower(str_replace(' ', '-', $schoolName));
+        $formatePlanName = strtolower(str_replace(' ', '-', $request->input('PlanName')));
+        $url = 'plan/' . $formattedSchoolName . '/' . $formatePlanName . '/' . $request->input('PlanNum');
+        $data = InsurancePlan::where('ID', $request->input('PlanId'))->update(['Status' => 'Live', 'Url' => $url]);
+        $ccRecipients = SchoolParentalCoverageCcSetting::where('SchoolID', $request->input('SchoolId'))->pluck('UserID')->all();
+
+        foreach ($ccRecipients as $recipent) {
+            $staffmember = User::where('id', $recipent)->first();
+            $plan = InsurancePlan::where('ID', $request->input('PlanId'))->first();
+            $school = School::where('ID', $request->input('SchoolId'))->first();
+            $data = [
+                'name' => $staffmember->first_name . '' . $staffmember->last_name,
+                'school_name' => $school->name,
+                'plannum' => $plan->PlanNum,
+                'planname' => $plan->PlanName,
+                'plancreateddate' => $plan->created_at->format('m-d-y'),
+            ];
+            try {
+                Mail::to($staffmember->email)->send(new SchoolSideParentalCoverageMailer($data));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
+            }
+        }
+
+        return 'success';
+    }
+    
+    function getPlanByPlanNum($planmum){
+         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('PlanNum',$planmum)->first();
+        return $plan; 
+    }
 
 }

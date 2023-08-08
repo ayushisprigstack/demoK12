@@ -278,3 +278,6 @@ Route::get('/getAllPlans/{sid}', [AdminInsurancePlanController::class, 'getAllPl
 Route::get('/getPlanById/{pid}', [AdminInsurancePlanController::class, 'getPlanById']);
 Route::get('/getAllPlanForAdmin/{sid}', [AdminInsurancePlanController::class, 'getAllPlanForAdmin']);
 Route::post('/setPlanServicesPrice', [AdminInsurancePlanController::class, 'setPlanServicesPrice']);
+Route::get('/createAndStoreInsurancePlanPdf/{pid}', [AdminInsurancePlanController::class, 'createAndStoreInsurancePlanPdf']);
+Route::post('/confirmPlan', [AdminInsurancePlanController::class, 'confirmPlan']);
+Route::get('/getPlanByPlanNum/{plannum}', [AdminInsurancePlanController::class, 'getPlanByPlanNum']);

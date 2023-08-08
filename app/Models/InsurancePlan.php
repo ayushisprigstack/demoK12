@@ -23,7 +23,7 @@ class InsurancePlan extends Model
     }
     
       public function school() {
-        return $this->belongsTo(School::class, 'SchoolID', 'ID');
+        return $this->belongsTo(School::class, 'SchoolID', 'ID')->with('logo:Logo_Path');
     }
     public function coverdServicesNames() {
         return $this->hasMany(CoverdServiceLog::class, 'PlanID')->with('services:id,Name');
