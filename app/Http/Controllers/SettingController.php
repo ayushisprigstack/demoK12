@@ -274,7 +274,7 @@ class SettingController extends Controller
                 $UserData = User::whereIn('access_type', [5])->whereNotIn('id', $signup)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
             }
         } else if($id == 7){
-            $corporateStaff = AdminCorporateStaffCcSetting::where('School_ID', $sid)->pluck('UserID');
+            $corporateStaff = AdminCorporateStaffCcSetting::pluck('UserID');
             if($skey == 'null'){
                 $UserData = $query->whereNotIn('id',$corporateStaff)->get(['id', 'email']);
             }else{
