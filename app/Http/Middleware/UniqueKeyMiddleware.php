@@ -9,14 +9,15 @@ use App\Models\User;
 class UniqueKeyMiddleware
 {
     public function handle($request, Closure $next) {
-        $accessToken = $request->header('Authorization') ?: $request->query('access_token');
-        if (!$accessToken) {
+        $accessToken = $request->header('Authorization') ?: $request->query('access_token');        
+        if (!$accessToken) {           
             return response()->json(['error' => 'Access token not provided.'], 401);
         }
+     echo  $accessToken;
         $key = '0ga7v0ipnufgfpC';
         if ($key != $accessToken) {
             return response()->json(['error' => 'Invalid access token.'], 401);
-        }      
+        }             
         return $next($request);
     }
 

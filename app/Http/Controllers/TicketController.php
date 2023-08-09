@@ -286,7 +286,7 @@ class TicketController extends Controller {
                     $file = $img['Img'];
                     $name = $count . 'img';
                     $filePath = 'Tickets/' . $ticket->id . '/' . $name;
-                    Storage::disk('s3')->put($filePath, file_get_contents($file));
+                    Storage::disk('public')->put($filePath, file_get_contents($file));
 
                     $TicketImg = new TicketImage();
                     $TicketImg->Ticket_ID = $ticket->id;

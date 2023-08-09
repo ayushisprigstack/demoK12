@@ -188,6 +188,34 @@ class AdminInsurancePlanController extends Controller {
         return response()->json($plan);
     }
 
+    function createAndStoreInsurancePlanPdf($planid)
+        {                                              
+        $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID',$planid)->first();         
+         $s3 = new S3Client([
+            'version' => 'latest',
+            'region' => 'ap-south-1',
+            'credentials' => [
+                'key' => env('AWS_ACCESS_KEY_ID'),
+                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            ],
+        ]);
+        $filename = $planid . '_' . time() . '.pdf';
+        $tempFile = tempnam(sys_get_temp_dir(), 'pdf');
+        $pdf = PDF::loadView('insurancePlanPdf', ['data' => $data]);
+
+        file_put_contents($tempFile, $pdf->output());
+  
+        $s3->putObject([
+            'Bucket' => 'k12techbackendfiles',
+            'Key' => 'InsurancePlan/' . $filename,
+            'Body' => file_get_contents($tempFile),
+            'ContentType' => 'application/pdf',
+            'ContentDisposition' => 'inline',
+        ]);
+        unlink($tempFile);
+        $filePath = 'InsurancePlan/' . $filename;
+        InsurancePlan::where('ID',$planid)->update(['Pdf' => $filePath]);     
+    }     
     function setPlanServicesPrice(Request $request) {
         $schoolID = $request->input('SchoolId');
         $planID = $request->input('PlanId');
@@ -225,7 +253,8 @@ class AdminInsurancePlanController extends Controller {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
         }
-
+       $tdata = $this->createAndStoreInsurancePlanPdf($planID);
+       
         return 'success';
     }
 
@@ -333,5 +362,5 @@ class AdminInsurancePlanController extends Controller {
         }
         return $plan;
     }
-
+    
 }

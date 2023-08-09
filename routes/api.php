@@ -56,7 +56,7 @@ Route::middleware(['access.token'])->group(function () {
 });
 
 //testing here for github 
-
+Route::get('/tokenTesting', [LoginController::class, 'tokenTesting']);
 
 Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class, 'Tickets']);
 Route::get('/menuAccess/{uid}', [LoginController::class, 'menuAccess']);
@@ -285,3 +285,5 @@ Route::get('/createAndStoreInsurancePlanPdf/{pid}', [AdminInsurancePlanControlle
 Route::post('/confirmPlan', [AdminInsurancePlanController::class, 'confirmPlan']);
 Route::get('/getPlanByPlanNum/{plannum}', [AdminInsurancePlanController::class, 'getPlanByPlanNum']);
 Route::get('/allPlansForAdmin/{sid}&{skey}&{flag}', [AdminInsurancePlanController::class, 'allPlansForAdmin']);
+
+Route::post('/testUpload', [LoginController::class, 'testUpload']);

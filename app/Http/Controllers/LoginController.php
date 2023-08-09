@@ -24,6 +24,7 @@ use App\Models\Avtar;
 use App\Models\SignUpCcSetting;
 use ReCaptcha\ReCaptcha;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 class LoginController extends Controller {
 
     function Register(Request $request) {
@@ -267,6 +268,18 @@ class LoginController extends Controller {
         }   
     
     }
+    
+function tokenTesting() {
+    $response = Http::get('http://127.0.0.1:8000/api/tokenTesting');
+    if ($response->successful()) { 
+        $headers = $response->headers();
+        foreach ($headers as $name => $values) {
+            echo $name . ': ' . implode(', ', $values) . "<br>";
+        }
+    } else {
+        echo "Error fetching headers from: " . $endpointUrl;
+    }
+}
 
     function menuAccess($uid)
 {
@@ -332,6 +345,16 @@ class LoginController extends Controller {
     ]);
 }
 
+  function testUpload(Request $request) {
+
+    $request->validate([
+        'file' => 'required|file',
+    ]);
+    $filePath = $request->file('file')->store('uploads', 'public');
+
+    return response()->json(['path' => $filePath]);
+}
+
     }
 
 
@@ -350,3 +373,4 @@ class LoginController extends Controller {
        } 
     }
 
+  

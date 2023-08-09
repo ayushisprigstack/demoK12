@@ -88,12 +88,11 @@ class SettingController extends Controller
                             'msg' => 'School Name Already Exists.'
                 ));
             } else {
-                School::where('ID', $schoolId)->update(['name' => $schoolName]);
-                return Response::json(array('status' => "success"));
+                School::where('ID', $schoolId)->update(['name' => $schoolName]);                
             }
         }
 
-        $logoisset = Logo::where('School_ID', $schoolId)->where('Logo_Path', $request->input('UploadLogo'))->first();
+        $logoisset = Logo::where('School_ID', $schoolId)->where('Logo_Path', $request->input('UploadLogo'))->first();       
         if (!isset($logoisset)) {
             $check = Logo::where('School_ID', $schoolId)->first();
             if (isset($check)) {
