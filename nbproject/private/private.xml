@@ -3,14 +3,7 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/InsurancePlan.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/resources/views/insurancePlanPdf.blade.pdf</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/resources/views/invoicePdf.blade.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/Admin/AdminAllSchoolController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/InsurancePlanEnrollment.php</file>
             <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/routes/api.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/CoverdServiceLog.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/CoverdDeviceModelLog.php</file>
             <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/Admin/AdminInsurancePlanController.php</file>
         </group>
     </open-files>

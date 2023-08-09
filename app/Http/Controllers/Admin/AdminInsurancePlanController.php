@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\SchoolSideParentalCoverageMailer;
 use App\Mail\adminSetPricingForInsurancePlanMailer;
+use App\Mail\InsurancePlanNegotiationMailer;
 use App\Models\InvoiceLog;
 use App\Models\PartSKUs;
 use Dompdf\Dompdf;
@@ -49,6 +50,7 @@ use App\Models\SchoolParentalCoverageCcSetting;
 use App\Models\AdminCorporateStaffCcSetting;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+
 class AdminInsurancePlanController extends Controller {
 
     function AddInsurancePlan(Request $request) {
@@ -71,7 +73,7 @@ class AdminInsurancePlanController extends Controller {
         $insurancePlan->ContactEmail = $contactEmail;
         $insurancePlan->EstimatedEnrollment = $estimatedStudent;
         $insurancePlan->DevicesNotLeaveSchool = $prcofDevices;
-        $insurancePlan->PlanNum = $randomString; 
+        $insurancePlan->PlanNum = $randomString;
         $insurancePlan->save();
 
         $deviceModelsnames = explode(',', $deviceModels);
@@ -82,15 +84,15 @@ class AdminInsurancePlanController extends Controller {
             $coverdmodel->PlanID = $insurancePlan->id;
             $coverdmodel->save();
         }
+
         foreach ($otherProductsArray as $otherproduct) {
             $coverdproduct = new CoverdServiceLog();
             $coverdproduct->PlanID = $insurancePlan->id;
             $coverdproduct->ServiceID = $otherproduct['id'];
             $coverdproduct->save();
         }
+
         return 'success';
-        
-        
     }
 
     function getAllOtherProducts() {
@@ -99,44 +101,39 @@ class AdminInsurancePlanController extends Controller {
     }
 
     function getAllPlans($sid, $skey, $pflag) {
-        $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('SchoolID', $sid);
+         $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school');
 
-        if ($skey != 'null' && $pflag != 'null') {
-            $statusMap = [
-                1 => 'New_Added',
-                2 => 'Admin_Approve',
-                3 => 'Live',
-                4 => 'Past',
-            ];
-
-            if (isset($statusMap[$pflag])) {
-                $planQuery->where('Status', $statusMap[$pflag])
-                        ->where(function ($query) use ($skey) {
-                            $query->where('PlanName', 'like', '%' . $skey . '%')
-                            ->orWhere('SchoolName', 'like', '%' . $skey . '%')
-                            ->orWhere('ContactName', 'like', '%' . $skey . '%')
-                            ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
-                            ->orWhere('Price', 'like', '%' . $skey . '%');
-                        })
-                        ->orWhereHas('coverdServices.services', function ($query) use ($skey) {
-                            $query->where('Name', 'like', '%' . $skey . '%');
-                        });
-            }
-        } elseif ($pflag != 'null') {
-            $statusMap = [
-                1 => 'New_Added',
-                2 => 'Admin_Approve',
-                3 => 'Live',
-                4 => 'Past',
-            ];
-
-            if (isset($statusMap[$pflag])) {
-                $planQuery->where('Status', $statusMap[$pflag]);
-            }
+        if ($sid != 'null') {
+            $planQuery->where('SchoolID', $sid);
         }
 
-        $plan = $planQuery->orderByDesc('ID')->get();
+        $statusMap = [
+            1 => 'New_Added',
+            2 => 'Admin_Approve',
+            3 => 'Live',
+            4 => 'Past',
+            5 => 'Rejected'
+        ];
 
+        if ($pflag != 'null' && isset($statusMap[$pflag])) {
+            $planQuery->where('Status', $statusMap[$pflag]);
+        } else {
+            $planQuery->whereIn('Status', $statusMap);
+        }
+
+        if ($skey != 'null') {
+            $planQuery->where(function ($query) use ($skey) {
+                $query->where('PlanName', 'like', '%' . $skey . '%')
+                        ->orWhere('SchoolName', 'like', '%' . $skey . '%')
+                        ->orWhere('ContactName', 'like', '%' . $skey . '%')
+                        ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
+                        ->orWhere('Price', 'like', '%' . $skey . '%')
+                        ->orWhereHas('coverdServices.services', function ($innerQuery) use ($skey) {
+                            $innerQuery->where('Name', 'like', '%' . $skey . '%');
+                        });
+            });
+        }
+        $plan = $planQuery->orderByDesc('ID')->get();
         foreach ($plan as $data) {
             if ($data->Status == 'New_Added') {
                 $data->color_code = '#FDFAE4';
@@ -144,13 +141,15 @@ class AdminInsurancePlanController extends Controller {
                 $data->color_code = '#EFF4FF';
             } elseif ($data->Status == 'Live') {
                 $data->color_code = '#E7FEF6';
-            } else {
+            } elseif($data->Status == 'Past') {
                 $data->color_code = '#FFD3DD';
+            }elseif($data->Status == 'Rejected') {
+                $data->color_code = '#F9BDB5';
             }
         }
-
         return $plan;
     }
+
 
     function getPlanById($pid) {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $pid)->first();
@@ -188,8 +187,8 @@ class AdminInsurancePlanController extends Controller {
 
         return response()->json($plan);
     }
-   
-    function setPlanServicesPrice(Request $request){
+
+    function setPlanServicesPrice(Request $request) {
         $schoolID = $request->input('SchoolId');
         $planID = $request->input('PlanId');
         $servicesArray = $request->input('Services');
@@ -205,9 +204,9 @@ class AdminInsurancePlanController extends Controller {
                 $coverdproduct->save();
             }
             $totalPrice = CoverdServiceLog::where('PlanID', $planID)->sum('Price');
-            InsurancePlan::where('ID',$planID)->update(['Price'=>$totalPrice,'Status'=>'Admin_Approve']);
+            InsurancePlan::where('ID', $planID)->update(['Price' => $totalPrice, 'Status' => 'Admin_Approve']);
         }
-        
+
         $ccRecipients = AdminCorporateStaffCcSetting::all()->pluck('UserID');
         foreach ($ccRecipients as $recipent) {
             $staffmember = User::where('id', $recipent)->first();
@@ -225,34 +224,57 @@ class AdminInsurancePlanController extends Controller {
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
-            
-            
         }
-        
-        return  'success';
+
+        return 'success';
     }
-    
+
     function confirmPlan(Request $request) {
+        $schoolId = $request->input('SchoolId');
+        $planId = $request->input('PlanId');
+        $flag = $request->input('Flag');
         $schoolName = $request->input('SchoolName');
         $formattedSchoolName = strtolower(str_replace(' ', '-', $schoolName));
-        $formatePlanName = strtolower(str_replace(' ', '-', $request->input('PlanName')));
-        $url = 'plan/' . $formattedSchoolName . '/' . $formatePlanName . '/' . $request->input('PlanNum');
-        $data = InsurancePlan::where('ID', $request->input('PlanId'))->update(['Status' => 'Live', 'Url' => $url]);
-        $ccRecipients = SchoolParentalCoverageCcSetting::where('SchoolID', $request->input('SchoolId'))->pluck('UserID')->all();
+        $formattedPlanName = strtolower(str_replace(' ', '-', $request->input('PlanName')));
+        $url = 'plan/' . $formattedSchoolName . '/' . $formattedPlanName . '/' . $request->input('PlanNum');
 
-        foreach ($ccRecipients as $recipent) {
-            $staffmember = User::where('id', $recipent)->first();
-            $plan = InsurancePlan::where('ID', $request->input('PlanId'))->first();
-            $school = School::where('ID', $request->input('SchoolId'))->first();
-            $data = [
-                'name' => $staffmember->first_name . '' . $staffmember->last_name,
-                'school_name' => $school->name,
-                'plannum' => $plan->PlanNum,
-                'planname' => $plan->PlanName,
-                'plancreateddate' => $plan->created_at->format('m-d-y'),
-            ];
+        if ($flag == 1) {
+            InsurancePlan::where('ID', $planId)->update(['Status' => 'Live', 'Url' => $url]);
+        } else {
+            $negotiatedPrice = $request->input('NegotiatedPrice');
+            InsurancePlan::where('ID', $planId)->update(['Status' => 'Rejected', 'NegotiatedPrice' => $negotiatedPrice]);
+        }
+
+        $ccRecipients = SchoolParentalCoverageCcSetting::where('SchoolID', $schoolId)->pluck('UserID')->all();
+        $plan = InsurancePlan::where('ID', $planId)->first();
+        $school = School::where('ID', $schoolId)->first();
+
+        $recipients = $ccRecipients;
+        $recipients[] = $plan->ContactEmail;
+
+        $data = [
+            'school_name' => $school->name,
+            'plannum' => $plan->PlanNum,
+            'planname' => $plan->PlanName,
+            'plancreateddate' => $plan->created_at->format('m-d-y'),
+        ];
+
+        foreach ($recipients as $recipient) {
+            if ($recipient === $plan->ContactEmail) {
+                $name = $plan->ContactName;  // Assuming there's a ContactName column in the plan table
+                $email = $plan->ContactEmail;
+            } else {
+                $staffmember = User::where('id', $recipient)->first();
+                $name = $staffmember->first_name . ' ' . $staffmember->last_name;
+                $email = $staffmember->email;
+            }
+
             try {
-                Mail::to($staffmember->email)->send(new SchoolSideParentalCoverageMailer($data));
+                if ($flag == 1) {
+                    Mail::to($staffmember->email)->send(new SchoolSideParentalCoverageMailer($data));
+                } else {
+                    Mail::to($staffmember->email)->send(new InsurancePlanNegotiationMailer($data));
+                }
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
@@ -260,45 +282,42 @@ class AdminInsurancePlanController extends Controller {
 
         return 'success';
     }
-    
-    function getPlanByPlanNum($planmum){
-         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('PlanNum',$planmum)->first();
-        return $plan; 
-    }
-    
-    function allPlansForAdmin($sid, $skey, $pflag){
-        if($sid == 'null'){
-            $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->whereIn('Status',['New_Added','Rejected']);
-        }else{
-            $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('SchoolID', $sid)->whereIn('Status',['New_Added','Rejected']);
-        }             
-        if ($skey != 'null' && $pflag != 'null') {
-            $statusMap = [
-                1 => 'New_Added',
-                2 => 'Rejected'             
-            ];
-            if (isset($statusMap[$pflag])) {
-                $planQuery->where('Status', $statusMap[$pflag])
-                        ->where(function ($query) use ($skey) {
-                            $query->where('PlanName', 'like', '%' . $skey . '%')
-                            ->orWhere('SchoolName', 'like', '%' . $skey . '%')
-                            ->orWhere('ContactName', 'like', '%' . $skey . '%')
-                            ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
-                            ->orWhere('Price', 'like', '%' . $skey . '%');
-                        })
-                        ->orWhereHas('coverdServices.services', function ($query) use ($skey) {
-                            $query->where('Name', 'like', '%' . $skey . '%');
-                        });
-            }
-        } elseif ($pflag != 'null') {
-            $statusMap = [
-                1 => 'New_Added',
-                2 => 'Rejected'               
-            ];
 
-            if (isset($statusMap[$pflag])) {
-                $planQuery->where('Status', $statusMap[$pflag]);
-            }
+    function getPlanByPlanNum($planmum) {
+        $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('PlanNum', $planmum)->first();
+        return $plan;
+    }
+
+    function allPlansForAdmin($sid, $skey, $pflag) {
+        $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school');
+
+        if ($sid != 'null') {
+            $planQuery->where('SchoolID', $sid);
+        }
+
+        $statusMap = [
+            1 => 'New_Added',
+            2 => 'Rejected',
+            3 => 'Admin_Approve'
+        ];
+
+        if ($pflag != 'null' && isset($statusMap[$pflag])) {
+            $planQuery->where('Status', $statusMap[$pflag]);
+        } else {
+            $planQuery->whereIn('Status', $statusMap);
+        }
+
+        if ($skey != 'null') {
+            $planQuery->where(function ($query) use ($skey) {
+                $query->where('PlanName', 'like', '%' . $skey . '%')
+                        ->orWhere('SchoolName', 'like', '%' . $skey . '%')
+                        ->orWhere('ContactName', 'like', '%' . $skey . '%')
+                        ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
+                        ->orWhere('Price', 'like', '%' . $skey . '%')
+                        ->orWhereHas('coverdServices.services', function ($innerQuery) use ($skey) {
+                            $innerQuery->where('Name', 'like', '%' . $skey . '%');
+                        });
+            });
         }
         $plan = $planQuery->orderByDesc('ID')->get();
         foreach ($plan as $data) {

@@ -210,5 +210,10 @@ try {
             ));
         }
     }
+    
+    function takeAccesstoken($userid){
+        $get = User::where('id',$userid)->first();
+        return $get;
+    }
 
 }
