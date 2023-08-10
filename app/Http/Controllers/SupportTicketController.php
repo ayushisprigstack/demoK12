@@ -328,7 +328,7 @@ class SupportTicketController extends Controller {
             if ($base64Image !== null) {
                 $imageData = base64_decode($base64Image);
                 $filePath = 'SupportTickets/' . $supportTicket->id . '/img.jpg';
-                Storage::disk('s3')->put($filePath, $imageData);
+                Storage::disk('public')->put($filePath, $imageData);
                 SupportTicket::where('ID', $supportTicket->id)->update(['Img' => $filePath]);
             }            
 //  AssignedTo

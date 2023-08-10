@@ -232,7 +232,7 @@ class AdminAllSchoolController extends Controller {
                 $fileContent = base64_decode($ExtraDoc);
                 $filename = 'Batch/' . $batch->id . '_' . time() . '.pdf';
                 Storage::disk('public')->put($filename, $fileContent);
-                $filePath = 'Batch/' . $filename;
+//                $filePath = 'Batch/' . $filename;
             }
 //        
             foreach ($TicketID as $data) {
@@ -260,7 +260,7 @@ class AdminAllSchoolController extends Controller {
                     }
                 }
             }
-            CloseTicketBatch::where('School_ID', $schoolID)->where('ID', $batch->id)->update(['Amount' => $subtotal, 'Extra_Doc' => $filePath]);
+            CloseTicketBatch::where('School_ID', $schoolID)->where('ID', $batch->id)->update(['Amount' => $subtotal, 'Extra_Doc' => $filename]);
 
             $invoiceLog = new InvoiceLog();
             $invoiceLog->Batch_ID = $batch->id;
@@ -399,7 +399,7 @@ class AdminAllSchoolController extends Controller {
 
     public function ExtraAttachedDocForBatch($batchid) {
         $batch = CloseTicketBatch::where('ID', $batchid)->first();
-        $url = 'https://k12techbackendfiles.s3.ap-south-1.amazonaws.com/' . $batch->Extra_Doc;
+        $url = $batch->Extra_Doc;
         if (isset($batch->Extra_Doc)) {
             return $url;
         } else {
@@ -490,7 +490,7 @@ class AdminAllSchoolController extends Controller {
             $this->CreatePdfAndStore($batchid);
             $invoiceLog = InvoiceLog::where('Batch_ID', $batchid)->first();
             $userData = User::where('school_id', $invoiceLog->School_Id)->where('access_type', 1)->first();
-            $pdfPath = 'https://k12techbackendfiles.s3.ap-south-1.amazonaws.com/' . $invoiceLog->Invoice_Pdf;
+            $pdfPath =  $invoiceLog->Invoice_Pdf;
             
            try {
                 Mail::to($userData->email)->send(new InvoiceMailer($pdfPath));

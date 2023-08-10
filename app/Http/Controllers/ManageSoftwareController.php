@@ -110,10 +110,9 @@ class ManageSoftwareController extends Controller
 
     function GetSoftwareDocument($id)
     {
-        $software = ManageSoftware::where('ID', $id)->first();
-        $url = 'https://k12techbackendfiles.s3.ap-south-1.amazonaws.com/' . $software->Document;
+        $software = ManageSoftware::where('ID', $id)->first();       
         if (isset($software->Document)) {
-            return $url;
+            return $software->Document;
         } else {
             return 'error';
         }
