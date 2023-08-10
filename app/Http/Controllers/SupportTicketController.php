@@ -160,10 +160,12 @@ class SupportTicketController extends Controller {
 
             if ($Document !== null) {
             $imageData = base64_decode($Document);
-            $filePath = 'SupportTickets/' . $supportComment->id. '/' .$supportComment->ID . '.jpg'; // assuming JPEG format, adjust extension if different   
-            Storage::disk('s3')->put($filePath, $imageData);
-            SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
-        }
+                $filename = time() . '_' . rand(1000, 9999) . '.jpg';  // Example: 1629134523_1234.jpg
+                $filePath = 'SupportTickets/' . $supportComment->id . '/' . $filename; // Store with the random filename
+                Storage::disk('public')->put($filePath, $imageData);
+                SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
+                
+            }
       
             //send mail
             //school admin 

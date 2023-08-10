@@ -46,6 +46,7 @@ use App\Models\SchoolBatchLog;
 use App\Http\Controllers\FedexController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 class AdminAllSchoolController extends Controller {
 
     public function AllTicketsForAdminPanel($sid, $gridflag, $key, $skey, $sflag, $bid) {
@@ -170,7 +171,6 @@ class AdminAllSchoolController extends Controller {
         $batch_data_array = array();
         $batch = CloseTicketBatchLog::where('Batch_Id', $batchid)->get();
         $batchData = CloseTicketBatch::where('ID', $batchid)->select('Name', 'School_ID', 'Amount', 'Date')->first();
-
         $invoice = InvoiceLog::where('Batch_ID', $batchid)->first();
         $schooldata = School::where('ID', $invoice->School_Id)->first();
         $batchName = $batchData->Name;
@@ -197,8 +197,6 @@ class AdminAllSchoolController extends Controller {
             $batchtotal += $subtotal;
             array_push($batch_data_array, ['BatchStatus' => $invoice->Payment_Status, 'TicketID' => $batchdata->Ticket_Id, 'TicketNum' => $ticket->ticket_num, 'Device' => $inventoryData->Device_model, 'SerialNum' => $inventoryData->Serial_number, 'AssetTag' => $inventoryData->Asset_tag, 'InventoryID' => $inventoryData->ID, 'Notes' => $ticket->notes, 'Ticketsubtotal' => $subtotal, 'Part' => $parts_array]);
         }
-
-
         $data = ['response' => 'success',
             'batchdata' => $batch_data_array,
             'batchname' => $batchName,
@@ -208,42 +206,13 @@ class AdminAllSchoolController extends Controller {
             'date' => $batchData->Date,
             'invoicestatus' => $invoice->Payment_Status];
 
-        // Create an S3 client
-        $s3 = new S3Client([
-            'version' => 'latest',
-            'region' => 'ap-south-1',
-            'credentials' => [
-                'key' => env('AWS_ACCESS_KEY_ID'),
-                'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            ],
-        ]);
-
-// Generate a unique filename for the PDF file
-        $filename = $invoice->ID . '_' . time() . '.pdf';
-// Create a temporary file to store the PDF
-        $tempFile = tempnam(sys_get_temp_dir(), 'pdf');
-// Generate the PDF using the dompdf library and save it to the temporary file
+        $filename = 'Invoice/' . $invoice->ID . '_' . time() . '.pdf';
         $pdf = PDF::loadView('invoicePdf', compact('data'));
-        file_put_contents($tempFile, $pdf->output());
-
-// Upload the PDF file to the S3 bucket
-        $s3->putObject([
-            'Bucket' => 'k12techbackendfiles',
-            'Key' => 'Invoice/' . $filename,
-            'Body' => file_get_contents($tempFile),
-            'ContentType' => 'application/pdf',
-            'ContentDisposition' => 'inline',
-        ]);
-
-// Delete the temporary file
-        unlink($tempFile);
-
-// Save the file path to the database
-        $filePath = 'Invoice/' . $filename;
-        InvoiceLog::where('ID', $invoice->ID)->update(['Invoice_Pdf' => $filePath]);
+        Storage::disk('public')->put($filename, $pdf->output());
+        InvoiceLog::where('ID', $invoice->ID)->update(['Invoice_Pdf' => $filename]);
     }
 
-     public function CreateBatchForAdminPage(Request $request) {
+    public function CreateBatchForAdminPage(Request $request) {
         $schoolID = $request->input('SchoolId');
         $TicketID = $request->input('TicketArray');
         $BatchName = $request->input('BatchName');
@@ -259,28 +228,10 @@ class AdminAllSchoolController extends Controller {
             $batch->save();
             $subtotal = 0;
 //
-            if ($ExtraDoc) {              
-                $file = base64_decode($ExtraDoc);
-
-                $s3 = new S3Client([
-                    'version' => 'latest',
-                    'region' => 'ap-south-1',
-                    'credentials' => [
-                        'key' => env('AWS_ACCESS_KEY_ID'),
-                        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-                    ],
-                ]);
-
-                $filename = $batch->id . '_' . time() . '.pdf';
-
-                $s3->putObject([
-                    'Bucket' => 'k12techbackendfiles',
-                    'Key' => 'Batch/' . $filename,
-                    'Body' => $file,
-                    'ContentType' => 'application/pdf',
-                    'ContentDisposition' => 'inline',
-                ]);
-
+            if ($ExtraDoc) {
+                $fileContent = base64_decode($ExtraDoc);
+                $filename = 'Batch/' . $batch->id . '_' . time() . '.pdf';
+                Storage::disk('public')->put($filename, $fileContent);
                 $filePath = 'Batch/' . $filename;
             }
 //        
@@ -385,11 +336,11 @@ class AdminAllSchoolController extends Controller {
                 $result = $this->CreateBatchForAdminPage($request);
                 $responseData = json_decode($result->getContent(), true); // Convert JSON string to an array
                 $batchId = $responseData['BatchID']; // Access the BatchID property           
-
+                $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
                 $imageData = file_get_contents($shipmentData['url']);
                 $filename = time() . '_' . rand(1000, 9999) . '.jpg';
-                $filePath = 'FedExQrCodes/' . $batchId . '.jpg'; // assuming JPEG format, adjust extension if different   
-                Storage::disk('s3')->put($filePath, $imageData);
+                $filePath = 'FedExQrCodes/' . $batchId .$randomString.'.jpg'; // assuming JPEG format, adjust extension if different   
+                Storage::disk('public')->put($filePath, $imageData);
                 CloseTicketBatch::where('ID', $batchId)->update(['FedExQr' => $filePath, 'TrackingNum' => $shipmentData['trackingNumber']]);
                 return response()->json([
                             'status' => 'success',

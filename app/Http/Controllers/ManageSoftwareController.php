@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ManageSoftware;
 use Illuminate\Http\Request;
-use Aws\S3\S3Client;
+use Illuminate\Support\Facades\Storage;
 
 class ManageSoftwareController extends Controller
 {
@@ -64,24 +64,9 @@ class ManageSoftwareController extends Controller
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
                     $file = fopen($Document, 'r');
-                    $s3 = new S3Client([
-                        'version' => 'latest',
-                        'region' => 'ap-south-1',
-                        'credentials' => [
-                            'key' => env('AWS_ACCESS_KEY_ID'),
-                            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-                        ],
-                    ]);
-                    $filename = $software->id . '_' . time() . '.pdf';
-                    $s3->putObject([
-                        'Bucket' => 'k12techbackendfiles',
-                        'Key' => 'Software/' . $filename,
-                        'Body' => $file,
-                        'ContentType' => 'application/pdf',
-                        'ContentDisposition' => 'inline',
-                    ]);
-                    $filePath = 'Software/' . $filename;
-                    ManageSoftware::where('school_id', $schoolID)->where('ID', $software->id)->update(['Document' => $filePath]);
+                    $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
+                     Storage::disk('public')->put($filename, $file);                   
+                    ManageSoftware::where('school_id', $schoolID)->where('ID', $software->id)->update(['Document' => $filename]);
                 }
                 return response()->json(collect(['response' => 'success',]));
             }
@@ -104,25 +89,10 @@ class ManageSoftwareController extends Controller
                     ]);
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
-                    $file = fopen($Document, 'r');
-                    $s3 = new S3Client([
-                        'version' => 'latest',
-                        'region' => 'ap-south-1',
-                        'credentials' => [
-                            'key' => env('AWS_ACCESS_KEY_ID'),
-                            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-                        ],
-                    ]);
-                    $filename = $MatchwithId->ID . '_' . time() . 'updated.pdf';
-                    $s3->putObject([
-                        'Bucket' => 'k12techbackendfiles',
-                        'Key' => 'Software/' . $filename,
-                        'Body' => $file,
-                        'ContentType' => 'application/pdf',
-                        'ContentDisposition' => 'inline',
-                    ]);
-                    $filePath = 'Software/' . $filename;
-                    ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filePath]);
+                    $file = fopen($Document, 'r');            
+                    $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
+                     Storage::disk('public')->put($filename, $file);          
+                    ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filename]);
                 }
             }
             return response()->json(collect(['response' => 'success',]));

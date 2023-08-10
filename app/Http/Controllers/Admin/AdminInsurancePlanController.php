@@ -189,33 +189,14 @@ class AdminInsurancePlanController extends Controller {
     }
 
     function createAndStoreInsurancePlanPdf($planid)
-        {                                              
-        $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID',$planid)->first();         
-         $s3 = new S3Client([
-            'version' => 'latest',
-            'region' => 'ap-south-1',
-            'credentials' => [
-                'key' => env('AWS_ACCESS_KEY_ID'),
-                'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            ],
-        ]);
-        $filename = $planid . '_' . time() . '.pdf';
-        $tempFile = tempnam(sys_get_temp_dir(), 'pdf');
+ {                                              
+        $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $planid)->first();
+        $filename = 'InsurancePlan/' . $planid . '_' . time() . '.pdf';
         $pdf = PDF::loadView('insurancePlanPdf', ['data' => $data]);
+        Storage::disk('public')->put($filename, $pdf->output());
+        InsurancePlan::where('ID', $planid)->update(['Pdf' => $filename]);
+    }
 
-        file_put_contents($tempFile, $pdf->output());
-  
-        $s3->putObject([
-            'Bucket' => 'k12techbackendfiles',
-            'Key' => 'InsurancePlan/' . $filename,
-            'Body' => file_get_contents($tempFile),
-            'ContentType' => 'application/pdf',
-            'ContentDisposition' => 'inline',
-        ]);
-        unlink($tempFile);
-        $filePath = 'InsurancePlan/' . $filename;
-        InsurancePlan::where('ID',$planid)->update(['Pdf' => $filePath]);     
-    }     
     function setPlanServicesPrice(Request $request) {
         $schoolID = $request->input('SchoolId');
         $planID = $request->input('PlanId');

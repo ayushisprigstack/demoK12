@@ -225,10 +225,27 @@ class TicketController extends Controller {
                     $count = 0;
                     foreach ($imgarray as $img) {
                         $count += 1;
-                        $file = $img['Img'];
-                        $name = $count . 'img';
-                        $filePath = 'Tickets/' . $ticket->id . '/' . $name;
-                        Storage::disk('s3')->put($filePath, file_get_contents($file));
+                        $base64_image = $img['Img'];
+                        $image_parts = explode(";base64,", $base64_image);                     
+                        if (count($image_parts) == 2) {
+                            $image_type_aux = explode("image/", $image_parts[0]);
+                            $image_type = end($image_type_aux);
+
+                            $extension = ($image_type == "jpeg" ? "jpg" : $image_type);
+
+                            $base64_image = $image_parts[1];
+                        } else {                         
+                            $extension = "png";
+                        }
+
+                        $imageData = base64_decode($base64_image);
+                        $name = $count.$randomString. 'img.' . $extension;
+                        $filePath = 'Tickets/' . $ticket->id . '/' . $name;                    
+                        if (!Storage::disk('public')->exists('Tickets/' . $ticket->id)) {
+                            Storage::disk('public')->makeDirectory('Tickets/' . $ticket->id);
+                        }
+
+                        Storage::disk('public')->put($filePath, $imageData);
 
                         $TicketImg = new TicketImage();
                         $TicketImg->Ticket_ID = $ticket->id;
@@ -282,16 +299,33 @@ class TicketController extends Controller {
 
                 $count = 0;
                 foreach ($imgarray as $img) {
-                    $count += 1;
-                    $file = $img['Img'];
-                    $name = $count . 'img';
-                    $filePath = 'Tickets/' . $ticket->id . '/' . $name;
-                    Storage::disk('public')->put($filePath, file_get_contents($file));
+                   $count += 1;
+                        $base64_image = $img['Img'];
+                        $image_parts = explode(";base64,", $base64_image);                     
+                        if (count($image_parts) == 2) {
+                            $image_type_aux = explode("image/", $image_parts[0]);
+                            $image_type = end($image_type_aux);
 
-                    $TicketImg = new TicketImage();
-                    $TicketImg->Ticket_ID = $ticket->id;
-                    $TicketImg->Img = $filePath;
-                    $TicketImg->save();
+                            $extension = ($image_type == "jpeg" ? "jpg" : $image_type);
+
+                            $base64_image = $image_parts[1];
+                        } else {                         
+                            $extension = "png";
+                        }
+
+                        $imageData = base64_decode($base64_image);
+                        $name = $count.$randomString. 'img.' . $extension;
+                        $filePath = 'Tickets/' . $ticket->id . '/' . $name;                    
+                        if (!Storage::disk('public')->exists('Tickets/' . $ticket->id)) {
+                            Storage::disk('public')->makeDirectory('Tickets/' . $ticket->id);
+                        }
+
+                        Storage::disk('public')->put($filePath, $imageData);
+
+                        $TicketImg = new TicketImage();
+                        $TicketImg->Ticket_ID = $ticket->id;
+                        $TicketImg->Img = $filePath;
+                        $TicketImg->save();
                 }
 
                 // mail send   

@@ -55,9 +55,6 @@ Route::middleware(['access.token'])->group(function () {
 //   Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}', [BuildingController::class, 'allBuildings']); 
 });
 
-//testing here for github 
-Route::get('/tokenTesting', [LoginController::class, 'tokenTesting']);
-
 Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class, 'Tickets']);
 Route::get('/menuAccess/{uid}', [LoginController::class, 'menuAccess']);
 Route::post('/register',[LoginController::class,'register']);
