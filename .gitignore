@@ -2,6 +2,13 @@
 /public/build
 /public/hot
 /public/storage
+/public/avtar
+/public/Batch
+/public/FedExQrCodes
+/public/Invoice
+/public/Software
+/public/SupportTickets
+/public/Tickets
 /storage/*.key
 /vendor
 .env
