@@ -160,8 +160,8 @@ class DashboardController extends Controller {
             } elseif ($ticket->ticket_status == 1 || $ticket->ticket_status == 3 || $ticket->ticket_status == 4 || $ticket->ticket_status == 5 || $ticket->ticket_status == 6) {
 
                 array_push($openTicket_array, $ticket);
-            }
-            $ticket->SerialNum = $ticket->inventoryManagement->Serial_number;
+            }          
+            $ticket->SerialNum = $ticket->inventoryManagement->Serial_number ?? null;
             $ticket->makeHidden(['inventoryManagement', 'updated_at']);
         }
         return response()->json(

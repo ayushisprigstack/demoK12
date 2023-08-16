@@ -277,7 +277,7 @@ class UtilizerController extends Controller {
         ));
     }
 
-    function UtilizerData($sid, $key, $skey, $flag, $page) {
+    function UtilizerData($sid, $key, $skey, $flag, $page,$limit) {
         $subQuery = DB::table('students as s')
                 ->leftJoin('student_inventories as si', 'si.Student_ID', '=', 's.ID')
                 ->leftJoin('inventory_management as im1', 'im1.ID', '=', 'si.Inventory_ID')
@@ -334,7 +334,7 @@ class UtilizerController extends Controller {
         }
 
         $totalCount = $query->get()->count();
-        $utilizerData = $query->paginate(30, ['*'], 'page', $page);
+        $utilizerData = $query->paginate($limit, ['*'], 'page', $page);
         $collection = $utilizerData->getCollection();
         $searchResults = $collection;
 

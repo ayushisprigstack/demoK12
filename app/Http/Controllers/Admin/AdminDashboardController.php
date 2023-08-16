@@ -134,7 +134,6 @@ class AdminDashboardController extends Controller {
             $totalamount = 0;
             foreach ($invoice as $invoicedata) {
                 $batchTicket = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->distinct()->pluck('Ticket_Id')->all();
-//                $batchTicketCount = count($batchTicket);
                 $batchData = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->get();
                 foreach ($batchData as $batch) {
                     $totalamount += $batch->Batch_Sub_Total;
@@ -198,7 +197,7 @@ foreach ($ticktdata as $ticket) {
         $incomming_array[$school->ID]['amount'] += $ticket->ticketAttachments->sum(function ($attachment) {
             return $attachment->Parts_Price * $attachment->Quantity;
         });
-
+       
         $inventories = collect(); // Collect unique inventory IDs
      
         $incomming_array[$school->ID]['inventoryCount'] += $inventories->unique('ID')->count(); // Count unique inventory IDs
@@ -221,8 +220,6 @@ foreach ($ticktdata as $ticket) {
         $outgoing_array[$school->ID]['inventoryCount'] += $inventories->unique('ID')->count(); // Count unique inventory IDs
     }
 }
-
-
         $incomming_array = array_values($incomming_array);
         $outgoing_array = array_values($outgoing_array);
 

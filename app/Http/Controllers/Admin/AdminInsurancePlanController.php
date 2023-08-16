@@ -344,4 +344,5 @@ class AdminInsurancePlanController extends Controller {
         return $plan;
     }
     
+    
 }

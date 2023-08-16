@@ -65,7 +65,7 @@ Route::get('/allMembers/{sid}&{uid}',[SettingController::class,'allMembers']);
 Route::post('/upload', [InventoryController::class, 'uploadInventory']); 
 Route::get('/exportInventory/{flag}&{sid}', [InventoryController::class, 'exportInventory']); 
 Route::post('/manageInventoryAction', [InventoryController::class, 'manageInventoryAction']);
-Route::get('/allInventories/{sid}&{flag}&{key}&{skey}&{sflag}&{page}',[InventoryController::class, 'allInventories']);
+Route::get('/allInventories/{sid}&{flag}&{key}&{skey}&{sflag}&{page}&{limit}',[InventoryController::class, 'allInventories']);
 Route::post('/addUpdateInventory', [InventoryController::class, 'addUpdateInventory']);
 Route::get('/getInventoryDataById/{id?}', [InventoryController::class, 'getInventoryDataById']);
 //school
@@ -114,7 +114,7 @@ Route::post('/importUtilizer', [UtilizerController::class, 'importUtilizer']);
 Route::get('/exportUtilizer/{sid}',[UtilizerController::class,'exportUtilizer']);
 Route::get('/UtilizerLog/{sid}',[UtilizerController::class,'UtilizerLog']);
 Route::get('/StudentHistory/{sid}&{id}',[UtilizerController::class,'StudentHistory']);
-Route::get('/UtilizerData/{sid}&{key}&{skey}&{flag}&{page}',[UtilizerController::class,'UtilizerData']);
+Route::get('/UtilizerData/{sid}&{key}&{skey}&{flag}&{page}&{limit}', [UtilizerController::class, 'UtilizerData']);
 Route::post('/AddUpdateUtilizer', [UtilizerController::class, 'AddUpdateUtilizer']);
 Route::get('/UtilizerDetailsById/{id}',[UtilizerController::class,'UtilizerDetailsById']);
 //Allocation 
@@ -284,3 +284,6 @@ Route::get('/getPlanByPlanNum/{plannum}', [AdminInsurancePlanController::class, 
 Route::get('/allPlansForAdmin/{sid}&{skey}&{flag}', [AdminInsurancePlanController::class, 'allPlansForAdmin']);
 
 Route::post('/testUpload', [LoginController::class, 'testUpload']);
+Route::get('/getOverAllData', [SchoolController::class, 'getOverAllData']);
+Route::post('/uploadtest', [InventoryController::class, 'upload']);
+
