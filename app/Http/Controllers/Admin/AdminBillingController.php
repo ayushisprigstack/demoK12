@@ -135,31 +135,42 @@ class AdminBillingController extends Controller {
         return 'success';
     }
 
-    function AllBatchData($sid,$key,$skey,$sflag)
+    function AllBatchData($sid, $key, $skey, $sflag, $page, $limit)
     {
-      $allBatch = CloseTicketBatch::with('invoice','batchLog.ticket.ticketAttachments')->where('School_ID', $sid)->select('ID', 'Amount', 'Name', 'Date','Notes','FedExQr','TrackingNum')->get();  
+        $query = CloseTicketBatch::with('invoice', 'batchLog.ticket.ticketAttachments')->where('School_ID', $sid)->select('ID', 'Amount', 'Name', 'Date', 'Notes', 'FedExQr', 'TrackingNum');
+        $allBatch = $query->get();
         $allBatch->each(function ($batch) {
-         $batch->InvoiceNum =  $batch->invoice[0]['ID'];
-         $batch->InvoiceStatus = $batch->invoice[0]['Payment_Status'];
-         $batch->TransactionId = $batch->invoice[0]['ChequeNo'];
-         
-         $total = 0;
-        foreach ($batch->batchLog as $batchLog) {
-            $subtotal = 0;
-            foreach ($batchLog->ticket->ticketAttachments as $ticketAttachment) {
-                if($ticketAttachment['Parts_Flag'] == 1){
-                   $amount = $ticketAttachment['Parts_Price']*$ticketAttachment['Quantity'];
-                   $subtotal += $amount;  
+            $batch->InvoiceNum = $batch->invoice[0]['ID'];
+            $batch->InvoiceStatus = $batch->invoice[0]['Payment_Status'];
+            $batch->TransactionId = $batch->invoice[0]['ChequeNo'];
+
+            $total = 0;
+            foreach ($batch->batchLog as $batchLog) {
+                $subtotal = 0;
+                foreach ($batchLog->ticket->ticketAttachments as $ticketAttachment) {
+                    if ($ticketAttachment['Parts_Flag'] == 1) {
+                        $amount = $ticketAttachment['Parts_Price'] * $ticketAttachment['Quantity'];
+                        $subtotal += $amount;
+                    }
+                    $batch->SubTotal = $subtotal;
+
                 }
-                $batch->SubTotal = $subtotal;
-                
+                $batch->total += (int) $batchLog['Batch_Sub_Total'];
             }
-           $batch->total += (int) $batchLog['Batch_Sub_Total'];  
+
+        });
+        if ($key != 'null') {
+            $searchedArray = $allBatch->filter(function ($batch) use ($key) {
+                return strpos(strtolower($batch['InvoiceNum']), strtolower($key)) !== false ||
+                    strpos(strtolower($batch['InvoiceStatus']), strtolower($key)) !== false ||
+                    strpos(strtolower($batch['TransactionId']), strtolower($key)) !== false ||
+                    strpos(strtolower($batch['Name']), strtolower($key)) !== false ||
+                    strpos(strtolower($batch['Date']), strtolower($key)) !== false;
+            });
+            $allBatch = $searchedArray->values();
         }
-        
-      });
-      
-    if ($skey == 1) {
+
+        if ($skey == 1) {
             $allBatch = $sflag == 'as' ? $allBatch->sortBy('Name') : $allBatch->sortByDesc('Name');
         } elseif ($skey == 2) {
             $allBatch = $sflag == 'as' ? $allBatch->sortBy('InvoiceNum') : $allBatch->sortByDesc('InvoiceNum');
@@ -168,24 +179,19 @@ class AdminBillingController extends Controller {
         } else {
             $allBatch = $allBatch->sortByDesc('ID');
         }
-        $allBatch = $allBatch->values();
- 
-      $allBatch->makeHidden(['Amount','invoice','ticketAttachments']);
-      if($key == 'null'){
-          return  $allBatch; 
-      }else{
-            $searchedArray = $allBatch->filter(function ($batch) use ($key) {
-        return strpos(strtolower($batch['InvoiceNum']), strtolower($key)) !== false ||
-            strpos(strtolower($batch['InvoiceStatus']), strtolower($key)) !== false ||
-            strpos(strtolower($batch['TransactionId']), strtolower($key)) !== false ||
-            strpos(strtolower($batch['Name']), strtolower($key)) !== false ||
-            strpos(strtolower($batch['Date']), strtolower($key)) !== false;
-    });
-
-    return response()->json(array_values($searchedArray->toArray()));        
-      } 
-      
-     
+        $totalCount = $allBatch->count();
+        $utilizerData = collect($allBatch)->forPage($page, $limit);
+        $collection = $utilizerData->values();
+        foreach ($collection as $result) {
+            $result->makeHidden(['Amount', 'invoice', 'ticketAttachments']);
+        }
+        return response()->json([
+            'status' => 'success',
+            'msg' => $collection,
+            'count' => $totalCount
+        ]);
     }
+      
+         
     
 }

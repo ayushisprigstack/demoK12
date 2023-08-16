@@ -171,7 +171,7 @@ Route::get('/SendInvoice/{bid}',[AdminAllSchoolController::class,'SendInvoice'])
 Route::post('/InvoicePaymentBatchAmountCheck',[AdminAllSchoolController::class,'InvoicePaymentBatchAmountCheck']);
 Route::get('/ExtraAttachedDocForBatch/{bid}',[AdminAllSchoolController::class,'ExtraAttachedDocForBatch']);
 Route::post('/AdminChangeTicketStatus',[AdminAllSchoolController::class,'AdminChangeTicketStatus']);
-Route::get('/AllBatchData/{sid}&{skey}&{sortkey}&{sflag}',[AdminBillingController::class,'AllBatchData']);
+Route::get('/AllBatchData/{sid}&{skey}&{sortkey}&{sflag}&{page}&{limit}', [AdminBillingController::class, 'AllBatchData']);
 //admin dash board 
 
 Route::get('/TechnicianRepairedLog/{id}',[AdminDashboardController::class,'TechnicianRepairedLog']);
@@ -182,7 +182,7 @@ Route::post('/paymentDetailsSchoolSide',[SchoolInvoiceController::class,'payment
 Route::get('/downloadReceipt/{iid}',[SchoolInvoiceController::class,'downloadReceipt']);
 //k12 admin adduser 
 
-Route::get('/allK12User/{skey}&{sortbykey}&{sortbyflag}', [AddTechnicianController::class, 'allK12User']);
+Route::get('/allK12User/{skey}&{sortbykey}&{sortbyflag}&{page}&{limit}', [AddTechnicianController::class, 'allK12User']);
 Route::get('/K12UserData/{uid}',[AddTechnicianController::class,'K12UserData']);
 Route::get('/deleteK12User/{uid}&{flag}',[AddTechnicianController::class,'deleteK12User']);
 Route::post('/addUpdateK12User',[AddTechnicianController::class,'addUpdateK12User']);
@@ -190,7 +190,7 @@ Route::get('/setK12LoginasSchoolLogin/{email}&{sid}&{flag}',[AddTechnicianContro
 Route::get('/allLocation',[AddTechnicianController::class,'allLocation']);
 //Domain 
 Route::post('/AddUpdateDomain',[AdminDomainController::class,'AddUpdateDomain']);
-Route::get('/AllDomain/{key}&{flag}',[AdminDomainController::class,'AllDomain']);
+Route::get('/AllDomain/{key}&{flag}&{page}&{limit}', [AdminDomainController::class, 'AllDomain']);
 Route::get('/DomainDataByID/{id}',[AdminDomainController::class,'DomainDataByID']);
 //device allocation
 Route::post('/DeviceAllocationToUSer',[AllocationController::class,'DeviceAllocationToUSer']);
@@ -218,7 +218,7 @@ Route::post('addSupportTicketFromLink',[SupportTicketController::class,'addSuppo
 
 // location
 Route::post('/AddUpdateLocation',[AdminLocationController::class,'AddUpdateLocation']);
-Route::get('/LocationAddress/{key}&{skey}&{sflag}',[AdminLocationController::class,'LocationAddress']);
+Route::get('/LocationAddress/{key}&{skey}&{sflag}&{page}&{limit}', [AdminLocationController::class, 'LocationAddress']);
 Route::get('/LocationDataByID/{id}',[AdminLocationController::class,'LocationDataByID']);
 Route::post('/setmenuAccess',[LoginController::class,'setmenuAccess']);
 // Add more routes as needed
@@ -248,7 +248,7 @@ Route::get('/deleteBuilding/{id}',[BuildingController::class,'deleteBuilding']);
 Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}', [BuildingController::class, 'allBuildings']);
 Route::get('/getBuildingDataById/{id}',[BuildingController::class,'getBuildingDataById']);
 ////master inventory
-Route::get('/GetAllMasterInventory/{skey}&{flag}', [MasterInventoryController::class, 'GetAllMasterInventory']);
+Route::get('/GetAllMasterInventory/{skey}&{flag}&{page}&{limit}', [MasterInventoryController::class, 'GetAllMasterInventory']);
 Route::get('/GetMasterInventoryById/{id}', [MasterInventoryController::class, 'GetMasterInventoryById']);
 Route::post('/updateMasterInventory', [MasterInventoryController::class, 'updateMasterInventory']);
 Route::post('/allupdate', [MasterInventoryController::class, 'allupdate']);

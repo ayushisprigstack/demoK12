@@ -90,15 +90,16 @@ class AdminDomainController extends Controller {
         }
     }
 
-    function AllDomain($skey,$flag){
-        if($skey == 'null'){
-            $get = Domain::orderBy('Name',$flag)->get();
-        }else{
-         $get = Domain::where(function ($query) use ($skey) {
-                                    $query->where('Name', 'LIKE', "%$skey%");                                                                
-                                })->orderBy('Name',$flag)->get();
+function AllDomain($skey, $flag,$page,$limit)
+    {
+        if ($skey == 'null') {
+            $get = Domain::orderBy('Name', $flag)->paginate($limit, ['*'], 'page', $page);
+        } else {
+            $get = Domain::where(function ($query) use ($skey) {
+                $query->where('Name', 'LIKE', "%$skey%");
+            })->orderBy('Name', $flag)->paginate($limit, ['*'], 'page', $page);
         }
-        
+
         return $get;
     }
     

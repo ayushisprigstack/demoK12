@@ -155,15 +155,16 @@ class AddTechnicianController extends Controller {
         }
     }
 
-    function allK12User($skey, $sortbykey, $sortbyflag) {
+   function allK12User($skey, $sortbykey, $sortbyflag, $page, $limit)
+    {
         if ($skey == 'null') {
             $k12users = K12User::query();
         } else {
             $k12users = K12User::where(function ($query) use ($skey) {
-                        $query->where('first_name', 'LIKE', "%$skey%")
-                                ->orWhere('last_name', 'LIKE', "%$skey%")
-                                ->orWhere('email', 'LIKE', "%$skey%");
-                    });
+                $query->where('first_name', 'LIKE', "%$skey%")
+                    ->orWhere('last_name', 'LIKE', "%$skey%")
+                    ->orWhere('email', 'LIKE', "%$skey%");
+            });
         }
 
         if ($sortbykey == 1) {
@@ -172,16 +173,15 @@ class AddTechnicianController extends Controller {
             $k12users = $k12users->orderBy('access_type', $sortbyflag);
         } elseif ($sortbykey == 3) {
             $k12users = $k12users->orderBy('email', $sortbyflag);
-        } else { 
-            if($sortbykey == 'null'){
-              $k12users = $k12users->orderBy('ID','asc');  
-            }  else{
-                  $k12users = $k12users->orderBy('ID', $sortbyflag);
-            }           
-          
-        }
+        } else {
+            if ($sortbykey == 'null') {
+                $k12users = $k12users->orderBy('ID', 'asc');
+            } else {
+                $k12users = $k12users->orderBy('ID', $sortbyflag);
+            }
 
-        $k12users = $k12users->get();
+        }
+        $k12users = $k12users->paginate($limit, ['*'], 'page', $page);
         $accesses = Access::whereNotIn('ID', [1, 2, 3, 4, 7])->pluck('access_type', 'ID');
         $Access = Access::whereNotIn('ID', [1, 2, 3, 4, 7])->get();
 
@@ -216,9 +216,9 @@ class AddTechnicianController extends Controller {
         }
         $k12users->makeHidden(['created_at', 'updated_at', 'deleted_at']);
         return Response::json([
-                    'status' => "success",
-                    'msg' => $k12users,
-                    'access' => $Access
+            'status' => "success",
+            'msg' => $k12users,
+            'access' => $Access
         ]);
     }
 
