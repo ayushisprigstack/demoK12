@@ -47,10 +47,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-//Route::middleware(['access.token'])->group(function () {
-//    Route::get('/menuAccess1/{uid}', [LoginController::class, 'menuAccess1']);
-// 
-//});
+Route::middleware(['access.token'])->group(function () {
+    Route::get('/middlewareTesting', [LoginController::class, 'middlewareTesting']); 
+});
 
 //testing here for github okay
 

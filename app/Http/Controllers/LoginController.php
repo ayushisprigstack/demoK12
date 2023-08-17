@@ -310,6 +310,13 @@ class LoginController extends Controller {
     ]);
 }
 
+    function middlewareTesting(){
+        try {
+            return 'success';
+        } catch (Exception $ex) {
+            return $ex;
+        }
+    }
     }
 
 
