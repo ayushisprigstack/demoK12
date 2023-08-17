@@ -50,7 +50,7 @@ use App\Models\SchoolParentalCoverageCcSetting;
 use App\Models\AdminCorporateStaffCcSetting;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-
+use Carbon\Carbon;
 class AdminInsurancePlanController extends Controller {
 
     function AddInsurancePlan(Request $request) {
@@ -134,7 +134,12 @@ class AdminInsurancePlanController extends Controller {
             });
         }
         $plan = $planQuery->orderByDesc('ID')->get();
-        foreach ($plan as $data) {
+        $today = Carbon::today();
+        foreach ($plan as $data) {            
+            if (Carbon::parse($data->EndDate)->lt($today))
+            {
+                   $data->Url = null;  
+            }            
             if ($data->Status == 'New_Added') {
                 $data->color_code = '#FDFAE4';
             } elseif ($data->Status == 'Admin_Approve') {
@@ -193,8 +198,8 @@ class AdminInsurancePlanController extends Controller {
         $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $planid)->first();
         $filename = 'InsurancePlan/' . $planid . '_' . time() . '.pdf';
         $pdf = PDF::loadView('insurancePlanPdf', ['data' => $data]);
-        Storage::disk('public')->put($filename, $pdf->output());
-        InsurancePlan::where('ID', $planid)->update(['Pdf' => $filename]);
+//        Storage::disk('public')->put($filename, $pdf->output());
+//        InsurancePlan::where('ID', $planid)->update(['Pdf' => $filename]);
     }
 
     function setPlanServicesPrice(Request $request) {
@@ -233,7 +238,7 @@ class AdminInsurancePlanController extends Controller {
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
-        }
+        }     
        $tdata = $this->createAndStoreInsurancePlanPdf($planID);
        
         return 'success';
@@ -247,12 +252,16 @@ class AdminInsurancePlanController extends Controller {
         $formattedSchoolName = strtolower(str_replace(' ', '-', $schoolName));
         $formattedPlanName = strtolower(str_replace(' ', '-', $request->input('PlanName')));
         $url = 'plan/' . $formattedSchoolName . '/' . $formattedPlanName . '/' . $request->input('PlanNum');
-
+        $startDate = $request->input('StartDate');
+        $carbonStartDate = Carbon::createFromFormat('Y-m-d', $startDate);
+        $endYear = $carbonStartDate->year + 1;
+        $carbonEndDate = Carbon::create($endYear, 6, 30);
+        $endDate = $carbonEndDate->format('Y-m-d');
         if ($flag == 1) {
-            InsurancePlan::where('ID', $planId)->update(['Status' => 'Live', 'Url' => $url]);
+            InsurancePlan::where('ID', $planId)->update(['Status' => 'Live','Url' => $url,'StartDate'=>$startDate,'EndDate'=>$endDate]);
         } else {
             $negotiatedPrice = $request->input('NegotiatedPrice');
-            InsurancePlan::where('ID', $planId)->update(['Status' => 'Rejected', 'NegotiatedPrice' => $negotiatedPrice]);
+            InsurancePlan::where('ID', $planId)->update(['Status' => 'Rejected', 'NegotiatedPrice' => $negotiatedPrice,'StartDate'=>$startDate,'EndDate'=>$endDate]);
         }
 
         $ccRecipients = SchoolParentalCoverageCcSetting::where('SchoolID', $schoolId)->pluck('UserID')->all();
@@ -295,6 +304,11 @@ class AdminInsurancePlanController extends Controller {
 
     function getPlanByPlanNum($planmum) {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('PlanNum', $planmum)->first();
+        $today = Carbon::today();     
+            if (Carbon::parse($plan->EndDate)->lt($today))
+            {
+                   $plan->Url = null;  
+            }
         return $plan;
     }
 

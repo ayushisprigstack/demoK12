@@ -2,19 +2,6 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/SupportTicketController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/ManageSoftwareController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/SchoolController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/BuildingController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/Avtar.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/Admin/AdminAllSchoolController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/StaffMemberController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/LoginController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/ManageTicketController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Http/Controllers/Admin/AdminInsurancePlanController.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/Ticket.php</file>
-            <file>file:/C:/xampp/htdocs/K12_TechBackend_dev/app/Models/InventoryManagement.php</file>
-        </group>
+        <group/>
     </open-files>
 </project-private>

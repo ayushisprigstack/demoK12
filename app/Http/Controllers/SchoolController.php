@@ -144,6 +144,7 @@ class SchoolController extends Controller {
             // Delete records from User table
             User::where('school_id', $sid)->forceDelete();
             School::where('ID', $sid)->forceDelete();
+            
         });
 
         return 'Success';
