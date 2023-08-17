@@ -45,7 +45,7 @@ use App\Models\SchoolBatch;
 use App\Models\SchoolBatchLog;
 use App\Http\Controllers\FedexController;
 use Illuminate\Http\JsonResponse;
-
+use Illuminate\Support\Facades\Log;
 class AdminAllSchoolController extends Controller {
 
     public function AllTicketsForAdminPanel($sid, $gridflag, $key, $skey, $sflag, $bid) {
@@ -484,10 +484,19 @@ class AdminAllSchoolController extends Controller {
             foreach ($batchDetails as $batchData) {
                 Ticket::where('ID', $batchData->Ticket_Id)->update(['ticket_status' => 2]);
             }
-            Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolMailer($data));
+            try {
+                Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolMailer($data));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
+            }
         } else {
             $invoiceLogs = InvoiceLog::where('School_Id', $schoolId)->where('Batch_ID', $batchId)->where('ID', $invoiceId)->update(['Receipt' => $receipt, 'Admin_notes' => $notes]);
-            Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolPaymentFailMailer($data));
+           
+            try {
+                       Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolPaymentFailMailer($data));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
+                    }
         }
 
         return 'success';
@@ -530,9 +539,13 @@ class AdminAllSchoolController extends Controller {
             $this->CreatePdfAndStore($batchid);
             $invoiceLog = InvoiceLog::where('Batch_ID', $batchid)->first();
             $userData = User::where('school_id', $invoiceLog->School_Id)->where('access_type', 1)->first();
-            $pdfPath = 'https://k12techbackendfiles.s3.ap-south-1.amazonaws.com/' . $invoiceLog->Invoice_Pdf;
-            Mail::to($userData->email)->send(new InvoiceMailer($pdfPath));
-
+            $pdfPath =  $invoiceLog->Invoice_Pdf;
+            
+           try {
+                Mail::to($userData->email)->send(new InvoiceMailer($pdfPath));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
+            }
             return 'success';
         } catch (Exception $ex) {
             return 'error';

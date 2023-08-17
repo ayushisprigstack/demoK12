@@ -28,7 +28,7 @@ use App\Models\Technology;
 use App\Models\Maintenance;
 use App\Models\Building;
 use App\Models\SupportTicketAssignment;
-
+use Illuminate\Support\Facades\Log;
 class SupportTicketController extends Controller {
 
     function getAllSupportTickets($skey,$sid,$uid,$flag,$sortkey,$sflag) {
@@ -123,7 +123,12 @@ class SupportTicketController extends Controller {
                 'name' => $supportTicketData->Name,
                 'ticketDescription' => $supportTicketData->Discription
             ];
-            Mail::to($supportTicketData->Email)->send(new SupportTicketClosedMailer($data));
+          
+            try {
+                                 Mail::to($supportTicketData->Email)->send(new SupportTicketClosedMailer($data));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
         } else {
             SupportTicket::where('ID', $request->input('TicketId'))->update(['Status' => 'Open']);
         }
@@ -155,10 +160,12 @@ class SupportTicketController extends Controller {
 
             if ($Document !== null) {
             $imageData = base64_decode($Document);
-            $filePath = 'SupportTickets/' . $supportComment->id. '/' .$supportComment->ID . '.jpg'; // assuming JPEG format, adjust extension if different   
-            Storage::disk('s3')->put($filePath, $imageData);
-            SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
-        }
+                $filename = time() . '_' . rand(1000, 9999) . '.jpg';  // Example: 1629134523_1234.jpg
+                $filePath = 'SupportTickets/' . $supportComment->id . '/' . $filename; // Store with the random filename
+                Storage::disk('public')->put($filePath, $imageData);
+                SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
+                
+            }
       
             //send mail
             //school admin 
@@ -180,7 +187,13 @@ class SupportTicketController extends Controller {
                     'name'=>$userdata->first_name . ' ' . $userdata->last_name,
                 ];
 //                Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
-                Mail::to($userdata->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
+                
+            try {
+                              Mail::to($userdata->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
+                
             } else {
                 $data = [
                     'name' => $user->first_name . ' ' . $user->last_name,
@@ -192,8 +205,13 @@ class SupportTicketController extends Controller {
                     'createdBy' => $ticket->Name,
                 ];
 //                Mail::to($user->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
-                Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
-            }
+                
+           try {
+                              Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
+                }
             return "success";
         } catch (Exception $ex) {
             return "error";
@@ -310,7 +328,7 @@ class SupportTicketController extends Controller {
             if ($base64Image !== null) {
                 $imageData = base64_decode($base64Image);
                 $filePath = 'SupportTickets/' . $supportTicket->id . '/img.jpg';
-                Storage::disk('s3')->put($filePath, $imageData);
+                Storage::disk('public')->put($filePath, $imageData);
                 SupportTicket::where('ID', $supportTicket->id)->update(['Img' => $filePath]);
             }            
 //  AssignedTo
@@ -329,8 +347,13 @@ class SupportTicketController extends Controller {
                     'Link'=>$link
                 ];
                 SupportTicket::where('ID', $supportTicket->id)->update(['AssignedTo' => $checkTicketAssignment->staffmember_id]);
-                Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
-                 Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
+                
+            try {
+                    Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
+                    Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: " . $e->getMessage());
+                }
             } else {
                 $user = User::where('school_id', $request->input('SchoolID'))->where('access_type', 1)->first();
                 $data = ['SchoolName' => $school->name,
@@ -339,10 +362,15 @@ class SupportTicketController extends Controller {
                     'Title' => $request->input('Title'),
                     'Link'=>$link
                 ];
-                Mail::to($user->email)->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreatedForSchool'));
-                 Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
+                
+           try {
+                    Mail::to($user->email)->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreatedForSchool'));
+                    Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: " . $e->getMessage());
+                }
             }
-           
+
             return Response::json(array(
                         'status' => "success",
                         'SupportTicketDetails' => $supportTicket,
@@ -374,7 +402,13 @@ class SupportTicketController extends Controller {
                 'Link'=>$link
             ];
          SupportTicket::where('SchoolId', $schoolID)->where('ID', $ticketID)->update(['AssignedTo' => $staffmemberID]);
-         Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
+        
+         
+         try {
+                               Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
         return 'success';
     }
 

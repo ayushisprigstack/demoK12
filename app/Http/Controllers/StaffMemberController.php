@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Mail\AddUserMailer;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Avtar;
-
+use Illuminate\Support\Facades\Log;
 class StaffMemberController extends Controller {
 
  function allUser($sid, $searchkey, $skey, $sflag)
@@ -161,7 +161,11 @@ class StaffMemberController extends Controller {
                         'school_name' => $schoolData->name,
                         'access_type' => $accessType->access_type
                     ];
-                    Mail::to($user->email)->send(new AddUserMailer($data));
+                    try {
+                                Mail::to($user->email)->send(new AddUserMailer($data));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
 
                     return Response::json(array(
                                 'status' => "success",

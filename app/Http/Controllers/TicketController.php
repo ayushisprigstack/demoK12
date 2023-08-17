@@ -29,6 +29,7 @@ use App\Models\TicketImage;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PartSKUs;
 use App\Models\TicketStatus;
+use Illuminate\Support\Facades\Log;
 class TicketController extends Controller {
 
     public function allIssue() {
@@ -190,7 +191,7 @@ class TicketController extends Controller {
     }
     
     public function generateIssue(Request $request) {
-        $msg = $request->input('msg');
+         $msg = $request->input('msg');
         $devicearray = $request->input('DeviceIssueArray');
         $imgarray = $request->input('ImageArray');
         $studentinventory = StudentInventory::where('Inventory_Id', $msg['inventoryId'])->first();
@@ -231,33 +232,54 @@ class TicketController extends Controller {
                     $count = 0;
                     foreach ($imgarray as $img) {
                         $count += 1;
-                        $file = $img['Img'];
-                        $name = $count . 'img';
-                        $filePath = 'Tickets/' . $ticket->id . '/' . $name;
-                        Storage::disk('s3')->put($filePath, file_get_contents($file));
+                        $base64_image = $img['Img'];
+                        $image_parts = explode(";base64,", $base64_image);                     
+                        if (count($image_parts) == 2) {
+                            $image_type_aux = explode("image/", $image_parts[0]);
+                            $image_type = end($image_type_aux);
+
+                            $extension = ($image_type == "jpeg" ? "jpg" : $image_type);
+
+                            $base64_image = $image_parts[1];
+                        } else {                         
+                            $extension = "png";
+                        }
+
+                        $imageData = base64_decode($base64_image);
+                        $name = $count.$randomString. 'img.' . $extension;
+                        $filePath = 'Tickets/' . $ticket->id . '/' . $name;                    
+                        if (!Storage::disk('public')->exists('Tickets/' . $ticket->id)) {
+                            Storage::disk('public')->makeDirectory('Tickets/' . $ticket->id);
+                        }
+
+                        Storage::disk('public')->put($filePath, $imageData);
 
                         $TicketImg = new TicketImage();
                         $TicketImg->Ticket_ID = $ticket->id;
                         $TicketImg->Img = $filePath;
                         $TicketImg->save();
                     }
- 
+
 //mail send 
                     $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
                     $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
                     $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
-                   
-                    foreach ($ccRecipients as $recipent) {                      
+
+                    foreach ($ccRecipients as $recipent) {
                         $staffmember = User::where('id', $recipent)->first();
-                          $data = [
-                        'name' => $staffmember->first_name . '' . $staffmember->last_name,
-                        'device' => $inventory->Serial_number,
-                        'school_name' => $schoolname->name,
-                        'ticketnum'=>$ticket->ticket_num,
-                        'ticketnote'=>$ticket->notes,
-                        'ticketcreateddate'=>$ticket->created_at->format('m-d-y'),    
-                    ];
-                        Mail::to($staffmember->email)->send(new CreateTicketMailer($data));
+                        $data = [
+                            'name' => $staffmember->first_name . '' . $staffmember->last_name,
+                            'device' => $inventory->Serial_number,
+                            'school_name' => $schoolname->name,
+                            'ticketnum' => $ticket->ticket_num,
+                            'ticketnote' => $ticket->notes,
+                            'ticketcreateddate' => $ticket->created_at->format('m-d-y'),
+                        ];
+                   try {
+                            Mail::to($staffmember->email)->send(new CreateTicketMailer($data));
+                        } catch (\Exception $e) {
+                            Log::error("Mail sending failed: " . $e->getMessage());
+                        }
                     }
                 } else {
                     return "Ticket already generated";
@@ -284,36 +306,57 @@ class TicketController extends Controller {
 
                 $count = 0;
                 foreach ($imgarray as $img) {
-                    $count += 1;
-                    $file = $img['Img'];
-                    $name = $count . 'img';
-                    $filePath = 'Tickets/' . $ticket->id . '/' . $name;
-                    Storage::disk('s3')->put($filePath, file_get_contents($file));
+                   $count += 1;
+                        $base64_image = $img['Img'];
+                        $image_parts = explode(";base64,", $base64_image);                     
+                        if (count($image_parts) == 2) {
+                            $image_type_aux = explode("image/", $image_parts[0]);
+                            $image_type = end($image_type_aux);
 
-                    $TicketImg = new TicketImage();
-                    $TicketImg->Ticket_ID = $ticket->id;
-                    $TicketImg->Img = $filePath;
-                    $TicketImg->save();
+                            $extension = ($image_type == "jpeg" ? "jpg" : $image_type);
+
+                            $base64_image = $image_parts[1];
+                        } else {                         
+                            $extension = "png";
+                        }
+
+                        $imageData = base64_decode($base64_image);
+                        $name = $count.$randomString. 'img.' . $extension;
+                        $filePath = 'Tickets/' . $ticket->id . '/' . $name;                    
+                        if (!Storage::disk('public')->exists('Tickets/' . $ticket->id)) {
+                            Storage::disk('public')->makeDirectory('Tickets/' . $ticket->id);
+                        }
+
+                        Storage::disk('public')->put($filePath, $imageData);
+
+                        $TicketImg = new TicketImage();
+                        $TicketImg->Ticket_ID = $ticket->id;
+                        $TicketImg->Img = $filePath;
+                        $TicketImg->save();
                 }
-           
+
                 // mail send   
-                    $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
-                    $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
-                    $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
-                   
-                    foreach ($ccRecipients as $recipent) {                      
-                        $staffmember = User::where('id', $recipent)->first();
-                         $data = [
+                $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
+                $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
+                $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
+
+                foreach ($ccRecipients as $recipent) {
+                    $staffmember = User::where('id', $recipent)->first();
+                    $data = [
                         'name' => $staffmember->first_name . '' . $staffmember->last_name,
                         'device' => $inventory->Serial_number,
                         'school_name' => $schoolname->name,
-                        'ticketnum'=>$ticket->ticket_num,
-                        'ticketnote'=>$ticket->notes,
-                        'ticketcreateddate'=>$ticket->created_at->format('m-d-y'),    
+                        'ticketnum' => $ticket->ticket_num,
+                        'ticketnote' => $ticket->notes,
+                        'ticketcreateddate' => $ticket->created_at->format('m-d-y'),
                     ];
+                    try {
                         Mail::to($staffmember->email)->send(new CreateTicketMailer($data));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
                     }
-                    }
+                }
+            }
 
             if ($msg['lonerDeviceStatus'] == 1) {
 

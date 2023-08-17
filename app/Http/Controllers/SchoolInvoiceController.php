@@ -37,7 +37,7 @@ use App\Exceptions\InvalidOrderException;
 use Illuminate\Support\Facades\Storage;
 use App\Mail\SchoolToAdminMailer;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Log;
 class SchoolInvoiceController extends Controller
 {
     function showInvoice($sid,$skey){
@@ -79,8 +79,12 @@ class SchoolInvoiceController extends Controller
                  'schoolName' => $schoolData->name,
                  'batchName'=>$batchName
              ];            
-             Mail::to('Info@k12techrepairs.com')->send(new SchoolToAdminMailer($data));
-            return 'success';
+              try {
+            Mail::to('Info@k12techrepairs.com')->send(new SchoolToAdminMailer($data));
+        } catch (\Exception $e) {
+            Log::error("Mail sending failed: " . $e->getMessage());
+        }
+        return 'success';
     }
     
     function downloadReceipt($invoiceId){        
