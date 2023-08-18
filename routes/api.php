@@ -49,7 +49,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::middleware(['access.token'])->group(function () {
     Route::get('/middlewareTesting', [LoginController::class, 'middlewareTesting']); 
-});
+
 
 //testing here for github okay
 
@@ -272,3 +272,4 @@ Route::post('/createShipment', [FedexController::class, 'createShipment']);
 //insurance
 Route::post('/AddInsurancePlan', [AdminInsurancePlanController::class, 'AddInsurancePlan']);
 Route::get('/getAllOtherProducts', [AdminInsurancePlanController::class, 'getAllOtherProducts']);
+});
