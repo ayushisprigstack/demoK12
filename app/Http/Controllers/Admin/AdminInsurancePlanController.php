@@ -16,7 +16,7 @@ use App\Models\TicketIssue;
 use App\Models\Domain;
 use App\Models\DeviceType;
 use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\Request;
+use Illuminate\Http\Request as IlluminateRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Request as Input;
@@ -44,6 +44,7 @@ use App\Models\Location;
 use App\Models\SchoolAddress;
 use App\Models\InsurancePlan;
 use App\Models\ProductsForInsurancePlan;
+use App\Models\InsurancePlanEnrollment;
 use App\Models\CoverdServiceLog;
 use App\Models\CoverdDeviceModelLog;
 use App\Models\SchoolParentalCoverageCcSetting;
@@ -51,9 +52,14 @@ use App\Models\AdminCorporateStaffCcSetting;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Stripe\Stripe;
+use Stripe\Charge;
+use Stripe\Customer;
+use Stripe\Exception\CardException;
 class AdminInsurancePlanController extends Controller {
 
-    function AddInsurancePlan(Request $request) {
+   function AddUpdateInsurancePlan(Request $request) {
         $schoolID = $request->input('SchoolId');
         $schoolName = $request->input('SchoolName');
         $contactName = $request->input('ContactName');
@@ -63,8 +69,10 @@ class AdminInsurancePlanController extends Controller {
         $prcofDevices = $request->input('PercentOfDevices');
         $deviceModels = $request->input('DeviceModels');
         $otherProductsArray = $request->input('OtherProducts');
+        $planID = $request->input('PlanID');
         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-        $insurancePlan = new InsurancePlan;
+        if($planID == 0){
+            $insurancePlan = new InsurancePlan;
 
         $insurancePlan->SchoolID = $schoolID;
         $insurancePlan->PlanName = $planName;
@@ -91,10 +99,35 @@ class AdminInsurancePlanController extends Controller {
             $coverdproduct->ServiceID = $otherproduct['id'];
             $coverdproduct->save();
         }
-
-        return 'success';
-    }
-
+        }else{
+            InsurancePlan::where('ID', $planID)->update(['PlanName' => $planName, 'ContactName' =>$contactName ,'ContactEmail'=>$contactEmail,'EstimatedEnrollment'=>$estimatedStudent,'DevicesNotLeaveSchool'=>$prcofDevices]);
+            $insurancePlan = InsurancePlan::where('ID', $planID)->first();            
+             $deviceModelsnames = explode(',', $deviceModels);
+               foreach ($deviceModelsnames as $name) {
+                   $checkModels =  CoverdDeviceModelLog::where('PlanID',$insurancePlan->ID)->where('Device',$name)->first();
+                     if(empty($checkModels)){
+                      $coverdmodel = new CoverdDeviceModelLog;
+                      $coverdmodel->Device = $name;
+                      $coverdmodel->PlanID = $insurancePlan->ID;
+                      $coverdmodel->save();
+                     }
+                     
+                     foreach ($otherProductsArray as $otherproduct) { 
+                        $checkServices = CoverdServiceLog::where('PlanID',$insurancePlan->ID)->where('ServiceID',$otherproduct['id'])->first();
+                        
+                         if(empty($checkServices)){                             
+                    $coverdproduct = new CoverdServiceLog();
+                    $coverdproduct->PlanID = $insurancePlan->ID;
+                    $coverdproduct->ServiceID = $otherproduct['id'];
+                    $coverdproduct->save();
+                
+                         }
+                     }
+                         
+        }
+        }
+      return 'success';  
+   }
     function getAllOtherProducts() {
         $get = ProductsForInsurancePlan::all();
         return $get;
@@ -198,8 +231,8 @@ class AdminInsurancePlanController extends Controller {
         $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $planid)->first();
         $filename = 'InsurancePlan/' . $planid . '_' . time() . '.pdf';
         $pdf = PDF::loadView('insurancePlanPdf', ['data' => $data]);
-//        Storage::disk('public')->put($filename, $pdf->output());
-//        InsurancePlan::where('ID', $planid)->update(['Pdf' => $filename]);
+        Storage::disk('public')->put($filename, $pdf->output());
+        InsurancePlan::where('ID', $planid)->update(['Pdf' => $filename]);
     }
 
     function setPlanServicesPrice(Request $request) {
@@ -358,5 +391,55 @@ class AdminInsurancePlanController extends Controller {
         return $plan;
     }
     
-    
+    function teststrip(IlluminateRequest $request) {
+        $studentNum = $request->input('StudentNo');
+        $stripToken = $request->input('token');
+        $email = $request->input('Email');
+        $student = Student::where('Student_num',$studentNum)->first();
+        $deposit = $request->input('Total');             
+        $test =  env('STRIPE_SECRET_KEY');
+        Stripe::setApiKey($test);
+      
+      try {
+            if ($student != ' ') {
+
+                try {
+
+                    $studentStripeID = $student->stripeCustomerID;
+                    if ($studentStripeID != '') {
+                        $stripeCustomer = Customer::retrieve($studentStripeID, []);
+                    } else {
+                        $stripeCustomer = Customer::create(array(
+                                    'source' => $stripToken,
+                                    'name' => 'test',
+                                    'email' => $email,
+                        ));
+
+                        Student::where('Student_num', $studentNum)->update(['stripeCustomerID' => $stripeCustomer->id]);
+                    }
+
+
+
+                    $charge = Charge::create([
+                                "amount" => $deposit * 100,
+                                "currency" => "usd",
+                                "customer" => $stripeCustomer,
+                                "description" => "Payment - " . 'Preet Patel'
+                    ]);
+
+                    $enrollmentDetails = new InsurancePlanEnrollment();
+                    $enrollmentDetails->SchoolID = 168;
+                    $enrollmentDetails->PlanID = 8;
+                    $enrollmentDetails->save();
+
+                    return response()->json(['success' => true, 'message' => 'Payment successful!']);
+                } catch (CardException $e) {
+                    return response()->json(['success' => false, 'message' => $e->getMessage(), 'CardException']);
+                }
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage(),'Exception']);
+        }
+    }
+
 }

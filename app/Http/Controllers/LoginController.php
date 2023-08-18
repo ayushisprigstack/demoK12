@@ -331,8 +331,14 @@ class LoginController extends Controller {
                     'user' => $userType
         ]);
     }
-
-}
+    function middlewareTesting(){
+        try {
+            return 'success';
+        } catch (Exception $ex) {
+            return $ex;
+        }
+    }
+    }
 
 function setmenuAccess() {
     $accesstype = Access::all();

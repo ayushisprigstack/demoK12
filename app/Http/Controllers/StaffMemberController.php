@@ -16,21 +16,21 @@ use App\Models\Avtar;
 use Illuminate\Support\Facades\Log;
 class StaffMemberController extends Controller {
 
- function allUser($sid, $searchkey, $skey, $sflag)
+function allUser($sid, $searchkey, $skey, $sflag, $page, $limit)
     {
         if ($searchkey == 'null') {
-            $user = User::where('school_id', $sid)->whereIn('access_type', [1, 2, 3, 4, 8])->orderByDesc('id')->get();
+            $query = User::where('school_id', $sid)->whereIn('access_type', [1, 2, 3, 4, 8])->orderByDesc('id');
         } else {
-            $user = User::where('school_id', $sid)
+            $query = User::where('school_id', $sid)
                 ->whereIn('access_type', [1, 2, 3, 4, 8])
                 ->where(function ($query) use ($searchkey) {
                     $query->where('first_name', 'LIKE', "%$searchkey%")
                         ->orWhere('last_name', 'LIKE', "%$searchkey%")
                         ->orWhere('email', 'LIKE', "%$searchkey%");
                 })
-                ->orderByDesc('id')
-                ->get();
+                ->orderByDesc('id');
         }
+        $user = $query->paginate($limit, ['*'], 'page', $page);
         $array_allUser = array();
         foreach ($user as $userdata) {
             $avtar = Avtar::where('id', $userdata['avtar'])->first();
@@ -71,13 +71,13 @@ class StaffMemberController extends Controller {
             $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('Acess') : $array_allUser->sortBy('Acess');
         } elseif ($skey == 3) {
             $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('email') : $array_allUser->sortBy('email');
-        }else{
-            if($skey == 'null'){
-               $array_allUser = $array_allUser->sortByDesc('id');
-            }else{
+        } else {
+            if ($skey == 'null') {
+                $array_allUser = $array_allUser->sortByDesc('id');
+            } else {
                 $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('id') : $array_allUser->sortBy('id');
             }
-            
+
         }
         $final = $array_allUser->values();
         $Access = Access::whereNotIn('ID', [5, 6, 7])->get();
@@ -86,10 +86,17 @@ class StaffMemberController extends Controller {
         return Response::json([
             'status' => "success",
             'msg' => $final,
-            'access' => $Access
+            'access' => $Access,
+            'pagination' => [
+                'total' => $user->total(),
+                'per_page' => $user->perPage(),
+                'current_page' => $user->currentPage(),
+                'last_page' => $user->lastPage(),
+                'from' => $user->firstItem(),
+                'to' => $user->lastItem()
+            ]
         ]);
     }
-
     function updateUserData($uid) {
         $data = User::where('ID', $uid)->get();
         return Response::json(array(

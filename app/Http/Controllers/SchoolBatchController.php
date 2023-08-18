@@ -214,7 +214,8 @@ class SchoolBatchController extends Controller {
         }
     }
 
-    function getAllSchoolBatch($sid, $skey, $sortkey, $sflag) {
+function getAllSchoolBatch($sid, $skey, $sortkey, $sflag, $page, $limit)
+    {
         $sortField = '';
         if ($sortkey == 1) {
             $sortField = 'BatchName';
@@ -222,16 +223,24 @@ class SchoolBatchController extends Controller {
             $sortField = 'ID';
         }
         if ($skey == 'null') {
-            $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->orderBy($sortField, $sflag)->get();
+            if ($sortkey == 'null') {
+                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->paginate($limit, ['*'], 'page', $page);
+            } else {
+                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->orderBy($sortField, $sflag)->paginate($limit, ['*'], 'page', $page);
+            }
             return response()->json([
-                        'response' => 'success',
-                        'msg' => $get
+                'response' => 'success',
+                'msg' => $get
             ]);
         } else {
-            $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->orderBy($sortField, $sflag)->get();
+            if ($sortkey == 'null') {
+                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->paginate($limit, ['*'], 'page', $page);
+            } else {
+                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->orderBy($sortField, $sflag)->paginate($limit, ['*'], 'page', $page);
+            }
             return response()->json([
-                        'response' => 'success',
-                        'msg' => $get
+                'response' => 'success',
+                'msg' => $get
             ]);
         }
     }

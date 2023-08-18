@@ -48,11 +48,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware(['uniquekey'])->group(function () {
-   Route::get('/takeAccesstoken/{id}', [StaffMemberController::class, 'takeAccesstoken']); 
+   
 });
 
 Route::middleware(['access.token'])->group(function () {
-//   Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}', [BuildingController::class, 'allBuildings']); 
+ Route::get('/middlewareTesting', [LoginController::class, 'middlewareTesting']); 
 });
 
 Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class, 'Tickets']);
@@ -99,7 +99,7 @@ Route::post('/RepairTagPopUpData', [ManageTicketController::class, 'RepairTagPop
 Route::get('/getTicketDataById/{tid}',[ManageTicketController::class, 'getTicketDataById']);
 Route::get('/exportTickets/{sid}',[TicketController::class, 'exportTickets']);
 //user
-Route::get('/allUser/{sid}&{key}&{skey}&{sflag}',[StaffMemberController::class,'allUser']);
+Route::get('/allUser/{sid}&{key}&{skey}&{sflag}&{page}&{limit}', [StaffMemberController::class, 'allUser']);
 Route::get('/allAccess',[StaffMemberController::class,'allAccess']);
 Route::get('/getUserById/{uid?}',[StaffMemberController::class,'updateUserData']);
 Route::post('/deleteUser/{id}&{flag}', [StaffMemberController::class, 'deleteUser']);
@@ -212,7 +212,7 @@ Route::get('/schoolDatabyNumber/{num}',[SchoolController::class,'schoolDatabyNum
 Route::get('/TicketsForShipping/{sid?}{gflag}&{key}&{skey}&{sflag}',[ShippingController::class,'TicketsForShipping']);
 Route::post('/create-tracking-code', [ShippingController::class, 'createTrackingCode']);
 Route::post('/saveSchoolBatches', [SchoolBatchController::class, 'saveSchoolBatches']);
-Route::get('/getAllSchoolBatch/{sid}&{skey}&{sortkey}&{sflag}', [SchoolBatchController::class, 'getAllSchoolBatch']);
+Route::get('/getAllSchoolBatch/{sid}&{skey}&{sortkey}&{sflag}&{page}&{limit}', [SchoolBatchController::class, 'getAllSchoolBatch']);
 Route::post('/calculateTheBatchWeight', [SchoolBatchController::class, 'calculateTheBatchWeight']);
 Route::post('addSupportTicketFromLink',[SupportTicketController::class,'addSupportTicketFromLink']);
 
@@ -272,7 +272,7 @@ Route::get('/getlocationAddressByID/{id}', [AdminLocationController::class, 'get
 Route::post('/getAccessToken', [FedexController::class, 'getAccessToken']);
 Route::post('/createShipment', [FedexController::class, 'createShipment']);
 //insurance
-Route::post('/AddInsurancePlan', [AdminInsurancePlanController::class, 'AddInsurancePlan']);
+Route::post('/AddUpdateInsurancePlan', [AdminInsurancePlanController::class, 'AddUpdateInsurancePlan']);
 Route::get('/getAllOtherProducts', [AdminInsurancePlanController::class, 'getAllOtherProducts']);
 Route::get('/getAllPlans/{sid}&{skey}&{flag}', [AdminInsurancePlanController::class, 'getAllPlans']);
 Route::get('/getPlanById/{pid}', [AdminInsurancePlanController::class, 'getPlanById']);
@@ -286,4 +286,5 @@ Route::get('/allPlansForAdmin/{sid}&{skey}&{flag}', [AdminInsurancePlanControlle
 Route::post('/testUpload', [LoginController::class, 'testUpload']);
 Route::get('/getOverAllData', [SchoolController::class, 'getOverAllData']);
 Route::post('/uploadtest', [InventoryController::class, 'upload']);
+Route::post('/teststrip', [AdminInsurancePlanController::class, 'teststrip']);
 
