@@ -47,6 +47,8 @@ use App\Http\Controllers\FedexController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class AdminAllSchoolController extends Controller {
 
     public function AllTicketsForAdminPanel($sid, $gridflag, $key, $skey, $sflag, $bid) {
@@ -436,7 +438,7 @@ class AdminAllSchoolController extends Controller {
                 Ticket::where('ID', $batchData->Ticket_Id)->update(['ticket_status' => 2]);
             }
             try {
-                Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolMailer($data));
+                Mail::to('Info@k12techrepairs.com')->send(new AdminToSchoolMailer($data));
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
@@ -444,7 +446,7 @@ class AdminAllSchoolController extends Controller {
             $invoiceLogs = InvoiceLog::where('School_Id', $schoolId)->where('Batch_ID', $batchId)->where('ID', $invoiceId)->update(['Receipt' => $receipt, 'Admin_notes' => $notes]);
            
             try {
-                       Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolPaymentFailMailer($data));
+                       Mail::to('Info@k12techrepairs.com')->send(new AdminToSchoolPaymentFailMailer($data));
                     } catch (\Exception $e) {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }

@@ -30,7 +30,12 @@ function allUser($sid, $searchkey, $skey, $sflag, $page, $limit)
                 })
                 ->orderByDesc('id');
         }
-        $user = $query->paginate($limit, ['*'], 'page', $page);
+        if($page == 'null'){
+            $user = $query;
+        }else{
+            $user = $query->paginate($limit, ['*'], 'page', $page);
+        }
+        
         $array_allUser = array();
         foreach ($user as $userdata) {
             $avtar = Avtar::where('id', $userdata['avtar'])->first();

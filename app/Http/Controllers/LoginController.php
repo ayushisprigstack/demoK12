@@ -26,7 +26,8 @@ use ReCaptcha\ReCaptcha;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class LoginController extends Controller {
 
     function Register(Request $request) {
@@ -175,7 +176,7 @@ class LoginController extends Controller {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }
 
-                    $ccRecipients = SignUpCcSetting::all();
+                   $ccRecipients = NotificationEventsLog::where('EventID',6)->pluck('UserID')->all();
                     if (isset($ccRecipients)) {
                         foreach ($ccRecipients as $recipent) {
                             $staffmember = User::where('id', $recipent->UserID)->first();
@@ -239,7 +240,7 @@ class LoginController extends Controller {
 
 
 
-                    $ccRecipients = SignUpCcSetting::all();
+                    $ccRecipients = NotificationEventsLog::where('EventID',6)->pluck('UserID')->all();
                     foreach ($ccRecipients as $recipent) {
                         $staffmember = User::where('id', $recipent->UserID)->first();
                         $data = [

@@ -40,7 +40,8 @@ use App\Models\SchoolBatchLog;
 use App\Models\SchoolBatch;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
-
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class ManageTicketController extends Controller {
 
     function allTickets($sid, $uid) {
@@ -548,7 +549,7 @@ class ManageTicketController extends Controller {
                 PartSKUs::where('ID', $data['PartID'])->update(['Quantity' => $quantity]);
                 //mail send 
                 $schoolname = School::where('ID', $schoolId)->select('name')->first();
-                $ccRecipients = InventoryCcSetting::where('School_ID', $schoolId)->pluck('UserID')->all();                
+                $ccRecipients = NotificationEventsLog::where('EventID',2)->pluck('UserID')->all();              
                 $data = [
                     'partname' => $partssku->Title,
                     'remaining_quantity' => $partssku->Quantity - 1,

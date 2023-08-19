@@ -30,10 +30,12 @@ use DateTime;
 use App\Models\DeviceAllocationLog;
 use App\Models\Building;
 
-class BuildingController extends Controller {
-    
-  
-    function addUpdateBuildings(Request $request) {
+class BuildingController extends Controller
+{
+
+
+    function addUpdateBuildings(Request $request)
+    {
         $buildingName = $request->input('Building');
         $schoolId = $request->input('SchoolID');
         $addUpdateFlag = $request->input('AddUpdateFlag');
@@ -48,43 +50,54 @@ class BuildingController extends Controller {
         }
         return 'success';
     }
-    
-    function getBuildingDataById($id){
-        $get = Building::where('ID',$id)->first();
-          return response()->json(
-                        collect([
-                    'response' => 'success',
-                    'msg' => $get,
-        ]));
-    }
-    
-    function deleteBuilding($id){
-        Building::where('ID',$id)->forceDelete();
-         return 'success';
-    }
-    
-    function allBuildings($sid,$skey,$sortkey,$sflag)
+
+    function getBuildingDataById($id)
     {
-        if($skey == 'null'){
-             $get = Building::where('SchoolID',$sid)->orderByDesc('ID')->get();
-        }else{
-            $get = Building::where('SchoolID', $sid)->where(function ($query) use ($skey) {
-                        $query->where('Building', 'LIKE', "%$skey%");
-                    })->orderByDesc('ID')->get();
-        }
-        
-        if ($sortkey == 1) {
-            $get = $sflag == 'desc' ? $get->sortByDesc('Building') : $get->sortBy('Building');
-        } elseif ($sortkey == 2) {
-            $get = $sflag == 'desc' ? $get->sortByDesc('created_at') : $get->sortBy('created_at');
-        }
-       $get = $get->values();
-       
+        $get = Building::where('ID', $id)->first();
         return response()->json(
-                        collect([
-                    'response' => 'success',
-                    'msg' => $get,
-        ]));
+            collect([
+                'response' => 'success',
+                'msg' => $get,
+            ])
+        );
     }
+
+    function deleteBuilding($id)
+    {
+        Building::where('ID', $id)->forceDelete();
+        return 'success';
+    }
+
+
+    function allBuildings($sid, $skey, $sortkey, $sflag, $page, $limit)
+    {
+        $query = ($skey == 'null')
+            ? Building::where('SchoolID', $sid)
+            : Building::where('SchoolID', $sid)->where(function ($query) use ($skey) {
+                $query->where('Building', 'LIKE', "%$skey%");
+            });
+
+        if ($sortkey == 1) {
+            $sortColumn = 'Building';
+        } elseif ($sortkey == 2) {
+            $sortColumn = 'created_at';
+        } else {
+            $sortColumn = 'ID';
+        }
+
+        $sortDirection = ($sflag == 'desc') ? 'desc' : 'asc';
+        if ($page == 'null') {
+            $results = $query->orderBy($sortColumn, $sortDirection);
+        } else {
+            $results = $query->orderBy($sortColumn, $sortDirection)->paginate($limit, ['*'], 'page', $page);
+        }
+
+
+        return response()->json([
+            'response' => 'success',
+            'msg' => $results,
+        ]);
+    }
+
 
 }

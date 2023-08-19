@@ -57,6 +57,8 @@ use Stripe\Stripe;
 use Stripe\Charge;
 use Stripe\Customer;
 use Stripe\Exception\CardException;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class AdminInsurancePlanController extends Controller {
 
    function AddUpdateInsurancePlan(Request $request) {
@@ -254,7 +256,7 @@ class AdminInsurancePlanController extends Controller {
             InsurancePlan::where('ID', $planID)->update(['Price' => $totalPrice, 'Status' => 'Admin_Approve']);
         }
 
-        $ccRecipients = AdminCorporateStaffCcSetting::all()->pluck('UserID');
+        $ccRecipients = NotificationEventsLog::where('EventID',9)->pluck('UserID')->all();
         foreach ($ccRecipients as $recipent) {
             $staffmember = User::where('id', $recipent)->first();
             $plan = InsurancePlan::where('ID', $request->input('PlanId'))->first();
@@ -297,7 +299,7 @@ class AdminInsurancePlanController extends Controller {
             InsurancePlan::where('ID', $planId)->update(['Status' => 'Rejected', 'NegotiatedPrice' => $negotiatedPrice,'StartDate'=>$startDate,'EndDate'=>$endDate]);
         }
 
-        $ccRecipients = SchoolParentalCoverageCcSetting::where('SchoolID', $schoolId)->pluck('UserID')->all();
+       $ccRecipients = NotificationEventsLog::where('EventID',8)->pluck('UserID')->all();
         $plan = InsurancePlan::where('ID', $planId)->first();
         $school = School::where('ID', $schoolId)->first();
 

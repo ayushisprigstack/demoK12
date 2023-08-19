@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ManageSoftwareController extends Controller
 {
-    function GetAllSoftware($sid,$searchkey,$skey,$sflag)
+    function GetAllSoftware($sid, $searchkey, $skey, $sflag, $page, $limit)
     {
         $softwareQuery = ManageSoftware::where('school_id', $sid);
         if ($searchkey != 'null') {
@@ -21,8 +21,8 @@ class ManageSoftwareController extends Controller
                     ->orWhere('License_length', 'LIKE', '%' . $searchkey . '%');
             });
         }
-        
-         if ($skey == 1) {
+
+        if ($skey == 1) {
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Name') : $softwareQuery->orderByDesc('Name');
         } elseif ($skey == 2) {
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Date_Purchased') : $softwareQuery->orderByDesc('Date_Purchased');
@@ -30,11 +30,11 @@ class ManageSoftwareController extends Controller
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Cost') : $softwareQuery->orderByDesc('Cost');
         } elseif ($skey == 4) {
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Buildings') : $softwareQuery->orderByDesc('Buildings');
-        }else{
-          $softwareQuery->orderByDesc('ID');
+        } else {
+            $softwareQuery->orderByDesc('ID');
         }
-               
-        $software = $softwareQuery->get();
+
+        $software = $softwareQuery->paginate($limit, ['*'], 'page', $page);
         return response()->json(
             collect([
                 'response' => 'success',
@@ -58,14 +58,14 @@ class ManageSoftwareController extends Controller
                 $software->Buildings = $request->input('Buildings');
                 $software->License_Qty = $request->input('licenseQty');
                 $software->Notes = $request->input('Notes');
-                $software->Grade  = $request->input('Grade');
+                $software->Grade = $request->input('Grade');
                 $software->Subject = $request->input('Subject');
                 $software->save();
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
                     $file = fopen($Document, 'r');
                     $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
-                     Storage::disk('public')->put($filename, $file);                   
+                    Storage::disk('public')->put($filename, $file);
                     ManageSoftware::where('school_id', $schoolID)->where('ID', $software->id)->update(['Document' => $filename]);
                 }
                 return response()->json(collect(['response' => 'success',]));
@@ -89,9 +89,9 @@ class ManageSoftwareController extends Controller
                     ]);
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
-                    $file = fopen($Document, 'r');            
+                    $file = fopen($Document, 'r');
                     $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
-                     Storage::disk('public')->put($filename, $file);          
+                    Storage::disk('public')->put($filename, $file);
                     ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filename]);
                 }
             }
@@ -110,7 +110,7 @@ class ManageSoftwareController extends Controller
 
     function GetSoftwareDocument($id)
     {
-        $software = ManageSoftware::where('ID', $id)->first();       
+        $software = ManageSoftware::where('ID', $id)->first();
         if (isset($software->Document)) {
             return $software->Document;
         } else {

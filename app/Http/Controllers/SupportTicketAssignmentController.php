@@ -29,25 +29,32 @@ use App\Models\Maintenance;
 use App\Models\Building;
 use App\Models\SupportTicketAssignment;
 
-class SupportTicketAssignmentController extends Controller {
+class SupportTicketAssignmentController extends Controller
+{
 
-    function getAllSupportTicketAssignment($sid, $skey) {
-        $get = SupportTicketAssignment::with('building', 'assignTo.avtardata')
-                ->where('school_id', $sid)
-                ->when($skey != 'null', function ($query) use ($skey) {
-                    $query->where(function ($query) use ($skey) {
-                        $query->whereHas('building', function ($q) use ($skey) {
-                            $q->where('Building', 'LIKE', "%$skey%");
-                        })
-                        ->orWhereHas('assignTo', function ($q) use ($skey) {
-                            $q->where('first_name', 'LIKE', "%$skey%")
-                            ->orWhere('last_name', 'LIKE', "%$skey%");
-                        });
+    function getAllSupportTicketAssignment($sid, $skey, $page, $limit)
+    {
+        // Assuming $page and $limit are passed as parameters
+
+        $query = SupportTicketAssignment::with('building', 'assignTo.avtardata')
+            ->where('school_id', $sid)
+            ->when($skey != 'null', function ($query) use ($skey) {
+                $query->where(function ($query) use ($skey) {
+                    $query->whereHas('building', function ($q) use ($skey) {
+                        $q->where('Building', 'LIKE', "%$skey%");
+                    })
+                    ->orWhereHas('assignTo', function ($q) use ($skey) {
+                        $q->where('first_name', 'LIKE', "%$skey%")
+                        ->orWhere('last_name', 'LIKE', "%$skey%");
                     });
-                })
-                ->orderBy('ID', 'desc')
-                ->get();
+                });
+            })
+            ->orderBy('ID', 'desc');
 
+        // Paginate the results
+        $get = $query->paginate($limit, ['*'], 'page', $page);
+
+        // Modify the items in the collection as you did before
         $get->each(function ($data) {
             $data->buildingName = $data->building->Building ?? null;
             $data->assignToName = $data->assignTo->first_name . ' ' . $data->assignTo->last_name;
@@ -55,24 +62,30 @@ class SupportTicketAssignmentController extends Controller {
         });
         $get->makeHidden(['building', 'assignTo', 'created_at', 'updated_at', 'deleted_at']);
 
-        return Response::json(array(
-                    'status' => "success",
-                    'msg' => $get));
+        return Response::json([
+            'status' => "success",
+            'msg' => $get
+        ]);
     }
 
-    function getSupportTicketAssignmentByID($id) {
+    function getSupportTicketAssignmentByID($id)
+    {
         $get = SupportTicketAssignment::with('building', 'assignTo')->where('ID', $id)->first();
 
         $get->buildingName = $get->building->Building ?? null;
         $get->assignToName = $get->assignTo->first_name . ' ' . $get->assignTo->last_name;
 
         $get->makeHidden(['building', 'assignTo', 'created_at', 'updated_at', 'deleted_at']);
-        return Response::json(array(
-                    'status' => "success",
-                    'msg' => $get));
+        return Response::json(
+            array(
+                'status' => "success",
+                'msg' => $get
+            )
+        );
     }
 
-    function addUpdateSupportTicketAssignment(Request $request) {
+    function addUpdateSupportTicketAssignment(Request $request)
+    {
         $schoolID = $request->input('LogInSchoolID');
         $buildingID = $request->input('BuildingId');
         $category = $request->input('CategoryId');
@@ -81,24 +94,30 @@ class SupportTicketAssignmentController extends Controller {
         $flag = $request->input('Flag');
 
         $existingAssignment = SupportTicketAssignment::where('building_id', $buildingID)
-                ->where('category_id', $category)
-                ->where('staffmember_id', $staffMemberID)
-                ->first();
+            ->where('category_id', $category)
+            ->where('staffmember_id', $staffMemberID)
+            ->first();
 
         if ($existingAssignment) {
-            return Response::json(array(
-                        'status' => "error",
-                        'msg' => 'This combination already exists'));
+            return Response::json(
+                array(
+                    'status' => "error",
+                    'msg' => 'This combination already exists'
+                )
+            );
         }
         if ($flag == 1) {
             $existingAssignmentonlybuilding = SupportTicketAssignment::where('building_id', $buildingID)
-                    ->where('category_id', $category)
-                    ->first();
+                ->where('category_id', $category)
+                ->first();
 
             if ($existingAssignmentonlybuilding) {
-                return Response::json(array(
-                            'status' => "error",
-                            'msg' => 'This combination already exists'));
+                return Response::json(
+                    array(
+                        'status' => "error",
+                        'msg' => 'This combination already exists'
+                    )
+                );
             }
 
             $assignment = new SupportTicketAssignment;
@@ -107,18 +126,25 @@ class SupportTicketAssignmentController extends Controller {
             $assignment->staffmember_id = $staffMemberID;
             $assignment->school_id = $schoolID;
             $assignment->save();
-            return Response::json(array(
-                        'status' => "success",
-                        'msg' => 'TicketAssignment Success'));
+            return Response::json(
+                array(
+                    'status' => "success",
+                    'msg' => 'TicketAssignment Success'
+                )
+            );
         } else {
             SupportTicketAssignment::where('ID', $assignmentID)->update(['building_id' => $buildingID, 'category_id' => $category, 'staffmember_id' => $staffMemberID]);
-            return Response::json(array(
-                        'status' => "success",
-                        'msg' => 'TicketAssignment Updated'));
+            return Response::json(
+                array(
+                    'status' => "success",
+                    'msg' => 'TicketAssignment Updated'
+                )
+            );
         }
     }
 
-    function getDeallocateBuildings($sid) {
+    function getDeallocateBuildings($sid)
+    {
         $getAllocatedBuildings = SupportTicketAssignment::where('school_id', $sid)->pluck('building_id')->all();
         $getBuilding = Building::whereNotIn('ID', $getAllocatedBuildings)->where('SchoolID', $sid)->get();
         return $getBuilding;

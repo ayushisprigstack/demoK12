@@ -202,7 +202,7 @@ Route::get('/allDevice',[InventoryController::class,'allDevice']);
 Route::get('/FaqData',[FaqController::class,'FaqData']);
 
 Route::post('/addUpdateSupportTicket',[SupportTicketController::class,'addUpdateSupportTicket']);
-Route::get('/getAllSupportTickets/{skey}&{sid}&{uid}&{flag}&{sortkey}&{sflag}',[SupportTicketController::class,'getAllSupportTickets']);
+Route::get('/getAllSupportTickets/{skey}&{sid}&{uid}&{flag}&{sortkey}&{sflag}&{page}&{limit}',[SupportTicketController::class,'getAllSupportTickets']);
 Route::get('/getSupportTicketDataByid/{id}',[SupportTicketController::class,'getSupportTicketDataByid']);
 Route::post('/changeSupportTicketStatus',[SupportTicketController::class,'changeSupportTicketStatus']);
 Route::post('/addCommentsonSupportTicket',[SupportTicketController::class,'addCommentsonSupportTicket']);
@@ -236,7 +236,7 @@ Route::get('/GetEmailsbyId/{sid}&{id}&{skey}',[SettingController::class,'GetEmai
 Route::post('/SaveEmails',[SettingController::class,'SaveEmails']);
 Route::post('/deleteEmail/{id}&{flag}', [SettingController::class, 'deleteEmail']);
 //manage software
-Route::get('/GetAllSoftware/{sid}&{searchkey}&{skey}&{sflag}', [ManageSoftwareController::class, 'GetAllSoftware']);
+Route::get('/GetAllSoftware/{sid}&{searchkey}&{skey}&{sflag}&{page}&{limit}', [ManageSoftwareController::class, 'GetAllSoftware']);
 Route::post('/addupdatesoftware', [ManageSoftwareController::class, 'addupdatesoftware']);
 Route::get('/GetSoftwareById/{id}', [ManageSoftwareController::class, 'GetSoftwareById']);
 Route::get('/GetSoftwareDocument/{id}', [ManageSoftwareController::class, 'GetSoftwareDocument']);
@@ -245,7 +245,7 @@ Route::get('/getTechnologyAndMaintenanceData/{flag}', [SupportTicketController::
 //buildings
 Route::post('/addUpdateBuildings',[BuildingController::class,'addUpdateBuildings']);
 Route::get('/deleteBuilding/{id}',[BuildingController::class,'deleteBuilding']);
-Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}', [BuildingController::class, 'allBuildings']);
+Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}&{page}&{limit}', [BuildingController::class, 'allBuildings']);
 Route::get('/getBuildingDataById/{id}',[BuildingController::class,'getBuildingDataById']);
 ////master inventory
 Route::get('/GetAllMasterInventory/{skey}&{flag}&{page}&{limit}', [MasterInventoryController::class, 'GetAllMasterInventory']);
@@ -253,7 +253,7 @@ Route::get('/GetMasterInventoryById/{id}', [MasterInventoryController::class, 'G
 Route::post('/updateMasterInventory', [MasterInventoryController::class, 'updateMasterInventory']);
 Route::post('/allupdate', [MasterInventoryController::class, 'allupdate']);
 //support ticket assignment
-Route::get('/getAllSupportTicketAssignment/{sid}&{skey}', [SupportTicketAssignmentController::class, 'getAllSupportTicketAssignment']);
+Route::get('/getAllSupportTicketAssignment/{sid}&{skey}&{page}&{limit}', [SupportTicketAssignmentController::class, 'getAllSupportTicketAssignment']);
 Route::get('/getSupportTicketAssignmentByID/{sid}', [SupportTicketAssignmentController::class, 'getSupportTicketAssignmentByID']);
 Route::post('/addUpdateSupportTicketAssignment', [SupportTicketAssignmentController::class, 'addUpdateSupportTicketAssignment']);
 Route::get('/getDeallocateBuildings/{sid}', [SupportTicketAssignmentController::class, 'getDeallocateBuildings']);

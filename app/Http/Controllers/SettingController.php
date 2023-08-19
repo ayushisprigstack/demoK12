@@ -133,9 +133,40 @@ class SettingController extends Controller
         return response()->json(['msg' => $transformed]);
     }
     
-    function GetEmailsbyId($sid, $id, $skey)
+    function GetEmailsbyId($sid,$id, $skey)
+ {
+          $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventID', $id)->pluck('UserID');
+        $user = User::whereNotIn('id', $getEventsData)->where('school_id', $sid)->get();
+        return Response::json(['msg' => $user]) ?? null;
+    }
+
+    function SaveEmails(Request $request)
     {
+        $flag = $request->input('Flag');
+        $emails = $request->input('Emails');
+        $eventType = $request->input('EventType');
+      
+            foreach ($emails as $email) {
+                $user = User::where('id', $email['id'])->first();
+                if ($user) {
+                    $eventLog = NotificationEventsLog::where('UserID', $user->id)->where('EventID',$flag)->first();
+                    if (!$eventLog) {
+                        $ticketccsetting = new NotificationEventsLog();
+                        $ticketccsetting->SchoolID = $user->school_id;
+                        $ticketccsetting->UserID = $user->id;
+                        $ticketccsetting->EventID = $flag;
+                         $ticketccsetting->EventType = $eventType;
+                        $ticketccsetting->save();
+                    }
+                }
+            }
+         return "success";
         
+    } 
+     function deleteEmail($id, $flag)
+    {         
+       NotificationEventsLog::where('UserID',$id)->where('EventID',$flag)->forceDelete();       
+       return "success";
     }
     
 

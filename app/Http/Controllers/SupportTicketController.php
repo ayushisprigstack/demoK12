@@ -29,80 +29,86 @@ use App\Models\Maintenance;
 use App\Models\Building;
 use App\Models\SupportTicketAssignment;
 use Illuminate\Support\Facades\Log;
-class SupportTicketController extends Controller {
 
-    function getAllSupportTickets($skey,$sid,$uid,$flag,$sortkey,$sflag) {
-        //flag = 1 for techno 
+class SupportTicketController extends Controller
+{
+
+    function getAllSupportTickets($skey, $sid, $uid, $flag, $sortkey, $sflag, $page, $limit)
+    {
         $getUser = User::where('id', $uid)->first();
-        $get = SupportTicket::with('user')
-                ->where('Type', $flag)
-                ->where('SchoolId', $sid)
-                ->when($getUser->access_type != 1, function ($query) use ($uid) {
-            $query->where('AssignedTo', $uid);
-        });
 
-        $Open_ticket_array = [];
-        $Close_ticket_array = [];
+        $openTicketsQuery = SupportTicket::with('user')
+            ->where('Type', $flag)
+            ->where('SchoolId', $sid)
+            ->when($getUser->access_type != 1, function ($query) use ($uid) {
+                $query->where('AssignedTo', $uid);
+            })
+            ->where('Status', 'Open');
 
+        $closeTicketsQuery = SupportTicket::with('user')
+            ->where('Type', $flag)
+            ->where('SchoolId', $sid)
+            ->when($getUser->access_type != 1, function ($query) use ($uid) {
+                $query->where('AssignedTo', $uid);
+            })
+            ->where('Status', 'Closed');
         if ($skey != 'null') {
-            $get = $get->where(function ($query) use ($skey) {
+            $openTicketsQuery = $openTicketsQuery->where(function ($query) use ($skey) {
                 $query->where('ID', 'LIKE', "%$skey%")
-                        ->orWhere('Name', 'LIKE', "%$skey%")
-                        ->orWhere('Role', 'LIKE', "%$skey%")
-                        ->orWhere('Email', 'LIKE', "%$skey%")
-                        ->orWhere('Title', 'LIKE', "%$skey%");
+                    ->orWhere('Name', 'LIKE', "%$skey%")
+                    ->orWhere('Role', 'LIKE', "%$skey%")
+                    ->orWhere('Email', 'LIKE', "%$skey%")
+                    ->orWhere('Title', 'LIKE', "%$skey%");
+            });
+
+            $closeTicketsQuery = $closeTicketsQuery->where(function ($query) use ($skey) {
+                $query->where('ID', 'LIKE', "%$skey%")
+                    ->orWhere('Name', 'LIKE', "%$skey%")
+                    ->orWhere('Role', 'LIKE', "%$skey%")
+                    ->orWhere('Email', 'LIKE', "%$skey%")
+                    ->orWhere('Title', 'LIKE', "%$skey%");
             });
         }
 
         if ($sortkey == 1) {
-            $get = $sflag == 'as' ? $get->orderBy('Name') : $get->orderByDesc('Name');
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('Name') : $openTicketsQuery->orderByDesc('Name');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('Name') : $closeTicketsQuery->orderByDesc('Name');
         } elseif ($sortkey == 2) {
-            $get = $sflag == 'as' ? $get->orderBy('Email') : $get->orderByDesc('Email');
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('Email') : $openTicketsQuery->orderByDesc('Email');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('Email') : $closeTicketsQuery->orderByDesc('Email');
         } elseif ($sortkey == 3) {
-            $get = $sflag == 'as' ? $get->orderBy('Title') : $get->orderByDesc('Title');
-        }elseif ($sortkey == 4) {
-            $get = $sflag == 'as' ? $get->orderBy('AssignedTo') : $get->orderByDesc('AssignedTo');
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('Title') : $openTicketsQuery->orderByDesc('Title');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('Title') : $closeTicketsQuery->orderByDesc('Title');
+        } elseif ($sortkey == 4) {
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('AssignedTo') : $openTicketsQuery->orderByDesc('AssignedTo');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('AssignedTo') : $closeTicketsQuery->orderByDesc('AssignedTo');
+        } else {
+            $openTicketsQuery->orderByDesc('ID');
+            $closeTicketsQuery->orderByDesc('ID');
         }
-        else{
-             $get->orderByDesc('ID');
-        }
 
+        // Paginate Open Tickets
+        $openTickets = $openTicketsQuery->paginate($limit, ['*'], 'open_tickets_page', $page);
 
-       
-        $tickets = $get->get();
-
-        foreach ($tickets as $ticket) {
-            switch ($ticket->Role) {
-                case 1:
-                    $ticket->RoleName = 'Student/Parent';
-                    break;
-                case 2:
-                    $ticket->RoleName = 'Teacher';
-                    break;            
-                default:
-                    $ticket->RoleName = 'null';
-                    break;
-            }
-
-            if ($ticket->Status == 'Open') {
-                $Open_ticket_array[] = $ticket;
-            } else {
-                $Close_ticket_array[] = $ticket;
-            }
-        }
+        // Paginate Close Tickets
+        $closeTickets = $closeTicketsQuery->paginate($limit, ['*'], 'close_tickets_page', $page);
 
         return response()->json([
-                    'status' => 'success',
-                    'OpenTickets' => $Open_ticket_array,
-                    'CloseTickets' => $Close_ticket_array,
+            'status' => 'success',
+            'OpenTickets' => $openTickets,
+            'CloseTickets' => $closeTickets,
         ]);
     }
 
-    function getSupportTicketDataByid($id) {
+    function getSupportTicketDataByid($id)
+    {
         $get = SupportTicket::where('ID', $id)->first();
-        return Response::json(array(
-                    'status' => "success",
-                    'msg' => $get));
+        return Response::json(
+            array(
+                'status' => "success",
+                'msg' => $get
+            )
+        );
     }
 
     function changeSupportTicketStatus(Request $request)
@@ -110,12 +116,12 @@ class SupportTicketController extends Controller {
         $flag = $request->input('Flag');
         if ($flag == 1) {
             SupportTicket::where('ID', $request->input('TicketId'))->update(['Status' => 'Closed']);
-            $supportTicketData = SupportTicket::where('ID',$request->input('TicketId'))->first();
-            $school = School::where('ID',$supportTicketData->SchoolId)->first();
-            
+            $supportTicketData = SupportTicket::where('ID', $request->input('TicketId'))->first();
+            $school = School::where('ID', $supportTicketData->SchoolId)->first();
+
             $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
             $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportTicketData->SupportTicketNum;
-             $data = [
+            $data = [
                 'ticketNum' => $supportTicketData->SupportTicketNum,
                 'ticketTitle' => $supportTicketData->Title,
                 'link' => $link,
@@ -123,18 +129,19 @@ class SupportTicketController extends Controller {
                 'name' => $supportTicketData->Name,
                 'ticketDescription' => $supportTicketData->Discription
             ];
-          
+
             try {
-                                 Mail::to($supportTicketData->Email)->send(new SupportTicketClosedMailer($data));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
+                Mail::to($supportTicketData->Email)->send(new SupportTicketClosedMailer($data));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
+            }
         } else {
             SupportTicket::where('ID', $request->input('TicketId'))->update(['Status' => 'Open']);
         }
         return "success";
     }
-    function addCommentsonSupportTicket(Request $request) {
+    function addCommentsonSupportTicket(Request $request)
+    {
         $SchoolId = $request->input('SchoolID');
         $TicketNum = $request->input('TicketNum');
         $UserId = $request->input('UserEmail');
@@ -142,36 +149,36 @@ class SupportTicketController extends Controller {
         $AssignStaffmember = $request->input('AssignStaffMember');
         $ByWhom = $request->input('Flag');
         $Document = $request->input('Document');
-        
+
         try {
-            $ticket = SupportTicket::where('SupportTicketNum', $TicketNum)->first(); 
-            $user = User::where('id', $AssignStaffmember)->first() ?? null; 
+            $ticket = SupportTicket::where('SupportTicketNum', $TicketNum)->first();
+            $user = User::where('id', $AssignStaffmember)->first() ?? null;
             $supportComment = new SupportTicketComments;
             $supportComment->SupportTicketID = $ticket->ID;
             $supportComment->SchoolID = $SchoolId;
             $supportComment->UserEmail = $UserId;
             $supportComment->Comments = $Comment;
-            if($ByWhom == 1){
-            $supportComment->Firstname = $user->first_name;  
-            }else{
-            $supportComment->Firstname = $ticket->Name;   
+            if ($ByWhom == 1) {
+                $supportComment->Firstname = $user->first_name;
+            } else {
+                $supportComment->Firstname = $ticket->Name;
             }
             $supportComment->save();
 
             if ($Document !== null) {
-            $imageData = base64_decode($Document);
-                $filename = time() . '_' . rand(1000, 9999) . '.jpg';  // Example: 1629134523_1234.jpg
+                $imageData = base64_decode($Document);
+                $filename = time() . '_' . rand(1000, 9999) . '.jpg'; // Example: 1629134523_1234.jpg
                 $filePath = 'SupportTickets/' . $supportComment->id . '/' . $filename; // Store with the random filename
                 Storage::disk('public')->put($filePath, $imageData);
                 SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
-                
+
             }
-      
+
             //send mail
-            //school admin 
-           
+            //school admin
+
             $School = School::where('ID', $SchoolId)->first();
-            $userdata = User::where('school_id',$SchoolId)->where('access_type', 1)->first();
+            $userdata = User::where('school_id', $SchoolId)->where('access_type', 1)->first();
             $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
             $link = $frontendUrl . '/ticket/' . $School->schoolNumber . '/' . $ticket->SupportTicketNum . '/' . $ticket->TicketGuID;
             $linkWithoutGUID = $frontendUrl . '/ticket/' . $School->schoolNumber . '/' . $ticket->SupportTicketNum;
@@ -182,50 +189,51 @@ class SupportTicketController extends Controller {
                     'ticketNum' => $ticket->Title,
                     'comment' => $Comment,
                     'link' => $link,
-                    'linkWithoutGUID'=> $linkWithoutGUID,
+                    'linkWithoutGUID' => $linkWithoutGUID,
                     'schoolName' => $School->name,
-                    'name'=>$userdata->first_name . ' ' . $userdata->last_name,
+                    'name' => $userdata->first_name . ' ' . $userdata->last_name,
                 ];
-//                Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
-                
-            try {
-                              Mail::to($userdata->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
-                
+                //                Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
+
+                try {
+                    Mail::to($userdata->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: " . $e->getMessage());
+                }
+
             } else {
                 $data = [
                     'name' => $user->first_name . ' ' . $user->last_name,
                     'ticketNum' => $ticket->Title,
                     'comment' => $Comment,
                     'link' => $link,
-                    'linkWithoutGUID'=> $linkWithoutGUID,
+                    'linkWithoutGUID' => $linkWithoutGUID,
                     'schoolName' => $School->name,
                     'createdBy' => $ticket->Name,
                 ];
-//                Mail::to($user->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
-                
-           try {
-                              Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
+                //                Mail::to($user->email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SchoolTicketNewCommentAddForSchool'));
+
+                try {
+                    Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: " . $e->getMessage());
                 }
+            }
             return "success";
         } catch (Exception $ex) {
             return "error";
         }
     }
 
-    function getAllCommentsById($tid) {
-        $ticket = SupportTicket::with('building','user.avtardata')->where('SupportTicketNum', $tid)->first();
+    function getAllCommentsById($tid)
+    {
+        $ticket = SupportTicket::with('building', 'user.avtardata')->where('SupportTicketNum', $tid)->first();
         $ticket->avtarname = $ticket->user->avtardata->avtar ?? null;
         if (isset($ticket)) {
             $get = SupportTicketComments::with('supportTicket.user.avtardata')
-                    ->where('SupportTicketID', $ticket->ID)
-                    ->orderBy('created_at', 'desc')
-                    ->get();
+                ->where('SupportTicketID', $ticket->ID)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             if ($ticket->Type == 1) {
                 $issueType = $ticket->technology->Name;
@@ -235,7 +243,7 @@ class SupportTicketController extends Controller {
 
             $ticket->IssueType = $issueType;
             $ticket->BuildingName = $ticket->building->Building ?? null;
-            $ticket->makeHidden(['building', 'technology', 'maintenance','user','updated_at', 'created_at', 'deleted_at']);
+            $ticket->makeHidden(['building', 'technology', 'maintenance', 'user', 'updated_at', 'created_at', 'deleted_at']);
         }
 
         $commentArray = [];
@@ -264,7 +272,7 @@ class SupportTicketController extends Controller {
                 'Img' => $img,
                 'Type' => $type,
                 'IssueType' => $issueType,
-                'staffmemberAvtar'=>$staffmemberAvtar
+                'staffmemberAvtar' => $staffmemberAvtar
             ];
         }
         $isTicketClosed = ($ticket->Status == 'Closed' ? 1 : 0);
@@ -279,16 +287,17 @@ class SupportTicketController extends Controller {
             $allowComments = 1;
         }
         return Response::json(
-                        array(
-                            'status' => "success",
-                            'SupportTicketDetails' => $ticket,
-                            'msg' => $commentArray,
-                            'allowComments' => $allowComments,
-                        )
+            array(
+                'status' => "success",
+                'SupportTicketDetails' => $ticket,
+                'msg' => $commentArray,
+                'allowComments' => $allowComments,
+            )
         );
     }
 
-    function addSupportTicketFromLink(Request $request) {
+    function addSupportTicketFromLink(Request $request)
+    {
 
         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
         $randomID = Str::random(8, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
@@ -296,7 +305,7 @@ class SupportTicketController extends Controller {
         $supportTicket->Title = $request->input('Title');
         $supportTicket->Discription = $request->input('Description');
         $supportTicket->Name = $request->input('Name');
-        $supportTicket->Email = $request->input('Email');        
+        $supportTicket->Email = $request->input('Email');
         if ($request->input('Building') == 0) {
             $addBuilding = new Building;
             $addBuilding->Building = $request->input('BuildingName');
@@ -306,7 +315,7 @@ class SupportTicketController extends Controller {
         } elseif ($request->input('Building') == 'null') {
             $supportTicket->Building = NULL;
         } else {
-             $supportTicket->Building = $request->input('Building');
+            $supportTicket->Building = $request->input('Building');
         }
         $supportTicket->RoomNo = $request->input('RoomNo');
         $supportTicket->Status = 'Open';
@@ -314,10 +323,10 @@ class SupportTicketController extends Controller {
         $supportTicket->Role = $request->input('Flag') ?? null;
         $supportTicket->SupportTicketNum = $randomString;
         $supportTicket->StudentNum = $request->input('StudentNumber');
-        $supportTicket->Type = $request->input('TypeFlag');//1 techno
-        $supportTicket->TypeChildId = $request->input('TypeChildId');//1 techno
+        $supportTicket->Type = $request->input('TypeFlag'); //1 techno
+        $supportTicket->TypeChildId = $request->input('TypeChildId'); //1 techno
         $supportTicket->TicketGuID = $randomID;
-        
+
         $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
         $response = $request->input('Captcha');
         $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
@@ -330,25 +339,26 @@ class SupportTicketController extends Controller {
                 $filePath = 'SupportTickets/' . $supportTicket->id . '/img.jpg';
                 Storage::disk('public')->put($filePath, $imageData);
                 SupportTicket::where('ID', $supportTicket->id)->update(['Img' => $filePath]);
-            }            
-//  AssignedTo
-        $school = School::where('ID', $request->input('SchoolID'))->first();
-        $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
-        $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportTicket->SupportTicketNum;
-        $checkTicketAssignment = SupportTicketAssignment::where('building_id',$supportTicket->Building)->where('category_id',$request->input('TypeFlag'))->where('school_id',$request->input('SchoolID'))->whereNotNull('staffmember_id')->first();
-        if (isset($checkTicketAssignment)) {
-                $user = User::where('id', $checkTicketAssignment->staffmember_id)->first();                
-                $data = ['SchoolName' => $school->name,
+            }
+            //  AssignedTo
+            $school = School::where('ID', $request->input('SchoolID'))->first();
+            $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
+            $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportTicket->SupportTicketNum;
+            $checkTicketAssignment = SupportTicketAssignment::where('building_id', $supportTicket->Building)->where('category_id', $request->input('TypeFlag'))->where('school_id', $request->input('SchoolID'))->whereNotNull('staffmember_id')->first();
+            if (isset($checkTicketAssignment)) {
+                $user = User::where('id', $checkTicketAssignment->staffmember_id)->first();
+                $data = [
+                    'SchoolName' => $school->name,
                     'Name' => $user->first_name . ' ' . $user->last_name,
                     'TicketNum' => $supportTicket->SupportTicketNum,
                     'Title' => $supportTicket->Title,
                     'CreatedBy' => $supportTicket->Name,
                     'Discription' => $supportTicket->Discription,
-                    'Link'=>$link
+                    'Link' => $link
                 ];
                 SupportTicket::where('ID', $supportTicket->id)->update(['AssignedTo' => $checkTicketAssignment->staffmember_id]);
-                
-            try {
+
+                try {
                     Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
                     Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
                 } catch (\Exception $e) {
@@ -356,14 +366,15 @@ class SupportTicketController extends Controller {
                 }
             } else {
                 $user = User::where('school_id', $request->input('SchoolID'))->where('access_type', 1)->first();
-                $data = ['SchoolName' => $school->name,
+                $data = [
+                    'SchoolName' => $school->name,
                     'Name' => $user->first_name . ' ' . $user->last_name,
                     'CreatedBy' => $request->input('Name'),
                     'Title' => $request->input('Title'),
-                    'Link'=>$link
+                    'Link' => $link
                 ];
-                
-           try {
+
+                try {
                     Mail::to($user->email)->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreatedForSchool'));
                     Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
                 } catch (\Exception $e) {
@@ -371,62 +382,68 @@ class SupportTicketController extends Controller {
                 }
             }
 
-            return Response::json(array(
-                        'status' => "success",
-                        'SupportTicketDetails' => $supportTicket,
-            ));
+            return Response::json(
+                array(
+                    'status' => "success",
+                    'SupportTicketDetails' => $supportTicket,
+                )
+            );
         } else {
-            return Response::json(array(
-                        'status' => "error",
-                        'SupportTicketDetails' => $supportTicket,
-            ));
-    }
+            return Response::json(
+                array(
+                    'status' => "error",
+                    'SupportTicketDetails' => $supportTicket,
+                )
+            );
+        }
     }
 
-    function assignSupportTicketTOStaffmember(Request $request) 
+    function assignSupportTicketTOStaffmember(Request $request)
     {
         $ticketID = $request->input('SupportTicketID');
         $staffmemberID = $request->input('StaffID');
         $schoolID = $request->input('SchoolID');
-        $user = User::where('id',$staffmemberID)->first();
-        $school = School::where('ID',$schoolID)->first();
-        $supportticket = SupportTicket::where('ID', $ticketID)->first(); 
+        $user = User::where('id', $staffmemberID)->first();
+        $school = School::where('ID', $schoolID)->first();
+        $supportticket = SupportTicket::where('ID', $ticketID)->first();
         $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
         $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportticket->SupportTicketNum;
-        $data = ['SchoolName' => $school->name,
-                'Name' => $user->first_name . ' ' . $user->last_name,
-                'TicketNum' =>$supportticket->SupportTicketNum,
-                'Title'=>$supportticket->Title,
-                'CreatedBy'=>$supportticket->Name,
-                'Discription'=>$supportticket->Discription,
-                'Link'=>$link
-            ];
-         SupportTicket::where('SchoolId', $schoolID)->where('ID', $ticketID)->update(['AssignedTo' => $staffmemberID]);
-        
-         
-         try {
-                               Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
+        $data = [
+            'SchoolName' => $school->name,
+            'Name' => $user->first_name . ' ' . $user->last_name,
+            'TicketNum' => $supportticket->SupportTicketNum,
+            'Title' => $supportticket->Title,
+            'CreatedBy' => $supportticket->Name,
+            'Discription' => $supportticket->Discription,
+            'Link' => $link
+        ];
+        SupportTicket::where('SchoolId', $schoolID)->where('ID', $ticketID)->update(['AssignedTo' => $staffmemberID]);
+
+
+        try {
+            Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
+        } catch (\Exception $e) {
+            Log::error("Mail sending failed: " . $e->getMessage());
+        }
         return 'success';
     }
 
-    function getTechnologyAndMaintenanceData($flag) {
+    function getTechnologyAndMaintenanceData($flag)
+    {
         $technologies = Technology::all();
         $maintenance = Maintenance::all();
 
         if ($flag == 1) {
             return response()->json([
-                        'status' => 'success',
-                        'Technologies' => $technologies,
+                'status' => 'success',
+                'Technologies' => $technologies,
             ]);
         } else {
             return response()->json([
-                        'status' => 'success',
-                        'Maintenace' => $maintenance,
+                'status' => 'success',
+                'Maintenace' => $maintenance,
             ]);
         }
     }
-        
+
 }

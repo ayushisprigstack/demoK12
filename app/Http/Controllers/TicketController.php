@@ -30,6 +30,8 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\PartSKUs;
 use App\Models\TicketStatus;
 use Illuminate\Support\Facades\Log;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class TicketController extends Controller {
 
     public function allIssue() {
@@ -256,7 +258,7 @@ class TicketController extends Controller {
 //mail send 
                     $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
                     $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
-                    $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
+         $ccRecipients = NotificationEventsLog::where('EventID',1)->pluck('UserID')->all();
 
                     foreach ($ccRecipients as $recipent) {
                         $staffmember = User::where('id', $recipent)->first();
@@ -331,7 +333,7 @@ class TicketController extends Controller {
                 // mail send   
                 $schoolname = School::where('ID', $msg['schoolId'])->select('name')->first();
                 $inventory = InventoryManagement::where('ID', $msg['inventoryId'])->select('Device_model')->first();
-                $ccRecipients = TicketCcSetting::where('School_ID', $msg['schoolId'])->pluck('UserID')->all();
+            $ccRecipients = NotificationEventsLog::where('EventID',1)->pluck('UserID')->all();
 
                 foreach ($ccRecipients as $recipent) {
                     $staffmember = User::where('id', $recipent)->first();
