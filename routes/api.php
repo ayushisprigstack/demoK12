@@ -99,7 +99,7 @@ Route::post('/RepairTagPopUpData', [ManageTicketController::class, 'RepairTagPop
 Route::get('/getTicketDataById/{tid}',[ManageTicketController::class, 'getTicketDataById']);
 Route::get('/exportTickets/{sid}',[TicketController::class, 'exportTickets']);
 //user
-Route::get('/allUser/{sid}&{key}&{skey}&{sflag}&{page}&{limit}', [StaffMemberController::class, 'allUser']);
+Route::get('/allUser/{sid}&{key}&{skey}&{sflag}', [StaffMemberController::class, 'allUser']);
 Route::get('/allAccess',[StaffMemberController::class,'allAccess']);
 Route::get('/getUserById/{uid?}',[StaffMemberController::class,'updateUserData']);
 Route::post('/deleteUser/{id}&{flag}', [StaffMemberController::class, 'deleteUser']);
