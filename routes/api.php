@@ -47,17 +47,27 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::middleware(['uniquekey'])->group(function () {
+  Route::get('/allMembers/{sid}&{uid}',[SettingController::class,'allMembers']);
+  Route::post('/addUsers',[LoginController::class,'addUsers']);
+  Route::post('/register',[LoginController::class,'register']);
+  Route::get('/schoolDatabyNumber/{num}',[SchoolController::class,'schoolDatabyNumber']);
+  Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}', [BuildingController::class, 'allBuildings']);
+  Route::post('addSupportTicketFromLink',[SupportTicketController::class,'addSupportTicketFromLink']);
+  Route::get('/getTechnologyAndMaintenanceData/{flag}', [SupportTicketController::class, 'getTechnologyAndMaintenanceData']);
+  Route::get('/getAllCommentsById/{id}',[SupportTicketController::class,'getAllCommentsById']);
+  Route::post('/addCommentsonSupportTicket',[SupportTicketController::class,'addCommentsonSupportTicket']);
+  Route::get('/setK12LoginasSchoolLogin/{email}&{sid}&{flag}',[AddTechnicianController::class,'setK12LoginasSchoolLogin']);
+});
+
 Route::middleware(['access.token'])->group(function () {
     Route::get('/middlewareTesting', [LoginController::class, 'middlewareTesting']); 
 
 
 //testing here for github okay
 
-Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}&{page}',[ManageTicketController::class, 'Tickets']);
+Route::get('/Tickets/{sid}&{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class,'Tickets']);
 Route::get('/menuAccess/{uid}', [LoginController::class, 'menuAccess']);
-Route::post('/register',[LoginController::class,'register']);
-Route::post('/addUsers',[LoginController::class,'addUsers']);
-Route::get('/allMembers/{sid}&{uid}',[SettingController::class,'allMembers']);
 
 //inventory
 Route::post('/upload', [InventoryController::class, 'uploadInventory']); 
@@ -184,7 +194,6 @@ Route::get('/allK12User/{skey}&{sortbykey}&{sortbyflag}', [AddTechnicianControll
 Route::get('/K12UserData/{uid}',[AddTechnicianController::class,'K12UserData']);
 Route::get('/deleteK12User/{uid}&{flag}',[AddTechnicianController::class,'deleteK12User']);
 Route::post('/addUpdateK12User',[AddTechnicianController::class,'addUpdateK12User']);
-Route::get('/setK12LoginasSchoolLogin/{email}&{sid}&{flag}',[AddTechnicianController::class,'setK12LoginasSchoolLogin']);
 Route::get('/allLocation',[AddTechnicianController::class,'allLocation']);
 //Domain 
 Route::post('/AddUpdateDomain',[AdminDomainController::class,'AddUpdateDomain']);
@@ -203,16 +212,14 @@ Route::post('/addUpdateSupportTicket',[SupportTicketController::class,'addUpdate
 Route::get('/getAllSupportTickets/{skey}&{sid}&{uid}&{flag}&{sortkey}&{sflag}',[SupportTicketController::class,'getAllSupportTickets']);
 Route::get('/getSupportTicketDataByid/{id}',[SupportTicketController::class,'getSupportTicketDataByid']);
 Route::post('/changeSupportTicketStatus',[SupportTicketController::class,'changeSupportTicketStatus']);
-Route::post('/addCommentsonSupportTicket',[SupportTicketController::class,'addCommentsonSupportTicket']);
-Route::get('/getAllCommentsById/{id}',[SupportTicketController::class,'getAllCommentsById']);
+
 Route::get('/schoolDatabyId/{id}',[SchoolController::class,'schoolDatabyId']);
-Route::get('/schoolDatabyNumber/{num}',[SchoolController::class,'schoolDatabyNumber']);
 Route::get('/TicketsForShipping/{sid?}{gflag}&{key}&{skey}&{sflag}',[ShippingController::class,'TicketsForShipping']);
 Route::post('/create-tracking-code', [ShippingController::class, 'createTrackingCode']);
 Route::post('/saveSchoolBatches', [SchoolBatchController::class, 'saveSchoolBatches']);
 Route::get('/getAllSchoolBatch/{sid}&{skey}&{sortkey}&{sflag}', [SchoolBatchController::class, 'getAllSchoolBatch']);
 Route::post('/calculateTheBatchWeight', [SchoolBatchController::class, 'calculateTheBatchWeight']);
-Route::post('addSupportTicketFromLink',[SupportTicketController::class,'addSupportTicketFromLink']);
+
 
 // location
 Route::post('/AddUpdateLocation',[AdminLocationController::class,'AddUpdateLocation']);
@@ -239,11 +246,10 @@ Route::post('/addupdatesoftware', [ManageSoftwareController::class, 'addupdateso
 Route::get('/GetSoftwareById/{id}', [ManageSoftwareController::class, 'GetSoftwareById']);
 Route::get('/GetSoftwareDocument/{id}', [ManageSoftwareController::class, 'GetSoftwareDocument']);
 //supportTicket
-Route::get('/getTechnologyAndMaintenanceData/{flag}', [SupportTicketController::class, 'getTechnologyAndMaintenanceData']);
+
 //buildings
 Route::post('/addUpdateBuildings',[BuildingController::class,'addUpdateBuildings']);
 Route::get('/deleteBuilding/{id}',[BuildingController::class,'deleteBuilding']);
-Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}', [BuildingController::class, 'allBuildings']);
 Route::get('/getBuildingDataById/{id}',[BuildingController::class,'getBuildingDataById']);
 ////master inventory
 Route::get('/GetAllMasterInventory/{skey}&{flag}', [MasterInventoryController::class, 'GetAllMasterInventory']);

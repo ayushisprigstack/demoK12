@@ -57,12 +57,12 @@ class LoginController extends Controller {
                     $menuID = $menuAcess->pluck('Menu')->all();
                     $flag = $usersavedemail->access_type;
                     $Menu = Menu::whereIN('ID', $menuID)->get();
-                   
+                    $updatedData = User::where('email', $request->input('email'))->first();
                     $SchoolDetails = School::where('ID', $usersavedemail->school_id)->first();
 
                     return Response::json(array(
                                 'status' => "success",
-                                'msg' => $usersavedemail,
+                                'msg' => $updatedData,
                                 'menu' => $Menu,
                                 'schoolDetails'=>$SchoolDetails
                     ));

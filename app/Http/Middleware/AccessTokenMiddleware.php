@@ -9,8 +9,7 @@ use App\Models\User;
 class AccessTokenMiddleware
 {
     public function handle($request, Closure $next)
-    {
-        // Retrieve the access token from the request headers or query string
+    {       
         $accessToken = $request->header('Authorization') ?: $request->query('access_token');
         if (!$accessToken) {          
             return response()->json(['error' => 'Access token not provided.'], 401);

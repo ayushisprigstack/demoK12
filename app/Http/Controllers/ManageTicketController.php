@@ -591,7 +591,7 @@ class ManageTicketController extends Controller {
         return "success";
     }
 
-     function Tickets($sid,$gridflag,$key,$flag,$skey,$sflag,$tflag) {
+     function Tickets($sid,$gridflag,$key,$flag,$skey,$sflag,$tflag) {       
 //       $sid = school id   ,$gridflag = open,close,all,pending $key = search key ,$flag = open mathi k close mathi ,$sflag = as k desc ,$skey = sortby key, tflag = schoolside k admin side 
         $data = Ticket::with('inventoryManagement.studentInventory', 'ticketIssues.deviceIssue','ticketAttachments')
                 ->where('school_id', $sid)
