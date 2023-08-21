@@ -403,7 +403,7 @@ class ManageTicketController extends Controller {
                 $file = $img['Img'];
                 $name = $count . 'img_' . time();
                 $filePath = 'Tickets/' . $request->input('TicketId') . '/' . $name;
-                Storage::disk('s3')->put($filePath, file_get_contents($file));
+                Storage::disk('public')->put($filePath, file_get_contents($file));
 
                 $TicketImg = new TicketImage();
                 $TicketImg->Ticket_ID = $request->input('TicketId');

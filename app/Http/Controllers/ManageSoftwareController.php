@@ -43,7 +43,7 @@ class ManageSoftwareController extends Controller
         );
     }
 
-    function addupdatesoftware(Request $request)
+ function addupdatesoftware(Request $request)
     {
         if ($request->input('addupdateflag') == 1) {
             $software = new ManageSoftware();
@@ -58,30 +58,15 @@ class ManageSoftwareController extends Controller
                 $software->Buildings = $request->input('Buildings');
                 $software->License_Qty = $request->input('licenseQty');
                 $software->Notes = $request->input('Notes');
-                $software->Grade  = $request->input('Grade');
+                $software->Grade = $request->input('Grade');
                 $software->Subject = $request->input('Subject');
                 $software->save();
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
                     $file = fopen($Document, 'r');
-                    $s3 = new S3Client([
-                        'version' => 'latest',
-                        'region' => 'ap-south-1',
-                        'credentials' => [
-                            'key' => env('AWS_ACCESS_KEY_ID'),
-                            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-                        ],
-                    ]);
-                    $filename = $software->id . '_' . time() . '.pdf';
-                    $s3->putObject([
-                        'Bucket' => 'k12techbackendfiles',
-                        'Key' => 'Software/' . $filename,
-                        'Body' => $file,
-                        'ContentType' => 'application/pdf',
-                        'ContentDisposition' => 'inline',
-                    ]);
-                    $filePath = 'Software/' . $filename;
-                    ManageSoftware::where('school_id', $schoolID)->where('ID', $software->id)->update(['Document' => $filePath]);
+                    $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
+                    Storage::disk('public')->put($filename, $file);
+                    ManageSoftware::where('school_id', $schoolID)->where('ID', $software->id)->update(['Document' => $filename]);
                 }
                 return response()->json(collect(['response' => 'success',]));
             }
@@ -105,24 +90,9 @@ class ManageSoftwareController extends Controller
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
                     $file = fopen($Document, 'r');
-                    $s3 = new S3Client([
-                        'version' => 'latest',
-                        'region' => 'ap-south-1',
-                        'credentials' => [
-                            'key' => env('AWS_ACCESS_KEY_ID'),
-                            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-                        ],
-                    ]);
-                    $filename = $MatchwithId->ID . '_' . time() . 'updated.pdf';
-                    $s3->putObject([
-                        'Bucket' => 'k12techbackendfiles',
-                        'Key' => 'Software/' . $filename,
-                        'Body' => $file,
-                        'ContentType' => 'application/pdf',
-                        'ContentDisposition' => 'inline',
-                    ]);
-                    $filePath = 'Software/' . $filename;
-                    ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filePath]);
+                    $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
+                    Storage::disk('public')->put($filename, $file);
+                    ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filename]);
                 }
             }
             return response()->json(collect(['response' => 'success',]));
@@ -131,6 +101,7 @@ class ManageSoftwareController extends Controller
         }
         return 'success';
     }
+
 
     function GetSoftwareById($id)
     {
@@ -141,9 +112,8 @@ class ManageSoftwareController extends Controller
     function GetSoftwareDocument($id)
     {
         $software = ManageSoftware::where('ID', $id)->first();
-        $url = 'https://k12techbackendfiles.s3.ap-south-1.amazonaws.com/' . $software->Document;
         if (isset($software->Document)) {
-            return $url;
+            return $software->Document;
         } else {
             return 'error';
         }
