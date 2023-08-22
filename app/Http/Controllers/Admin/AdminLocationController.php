@@ -68,46 +68,48 @@ class AdminLocationController extends Controller {
         }
     }
 
-    function LocationAddress($skey,$sortkey,$sortflag) {
-    $defaultAddress = Location::where('ID',1)->first();
-    
-    $sortField = '';       
-    if ($sortkey == 1) {
-        $sortField = 'Location';
-    } elseif ($sortkey == 2) {
-        $sortField = 'StreetLine1';
-    } elseif ($sortkey == 3) {
-        $sortField = 'City';
-    } elseif ($sortkey == 4) {
-        $sortField = 'PostalCode';
-    } elseif ($sortkey == 5) {
-        $sortField = 'StateOrProvinceCode';    
-    }else{
-        $sortField = 'ID';
-        $sortflag = 'desc';
-    }
-        
-    
-    if ($skey == 'null') {
-        $get = Location::orderBy($sortField,$sortflag)->get();
-    } else {
-        $get = Location::where(function ($query) use ($skey) {
-            $query->where('StreetLine1', 'LIKE', "%$skey%")                               
+    function LocationAddress($skey, $sortkey, $sortflag, $page, $limit)
+    {
+        $defaultAddress = Location::where('ID', 1)->first();
+
+        $sortField = '';
+        if ($sortkey == 1) {
+            $sortField = 'Location';
+        } elseif ($sortkey == 2) {
+            $sortField = 'StreetLine1';
+        } elseif ($sortkey == 3) {
+            $sortField = 'City';
+        } elseif ($sortkey == 4) {
+            $sortField = 'PostalCode';
+        } elseif ($sortkey == 5) {
+            $sortField = 'StateOrProvinceCode';
+        } else {
+            $sortField = 'ID';
+            $sortflag = 'desc';
+        }
+
+
+        if ($skey == 'null') {
+            $get = Location::orderBy($sortField, $sortflag)->paginate($limit, ['*'], 'page', $page);
+        } else {
+            $get = Location::where(function ($query) use ($skey) {
+                $query->where('StreetLine1', 'LIKE', "%$skey%")
                     ->orWhere('City', 'LIKE', "%$skey%")
                     ->orWhere('PostalCode', 'LIKE', "%$skey%")
-                    ->orWhere('Location','LIKE', "%$skey%")
-                    ->orWhere('Location','LIKE', "%$skey%")
+                    ->orWhere('Location', 'LIKE', "%$skey%")
+                    ->orWhere('Location', 'LIKE', "%$skey%")
                     ->orWhere('StateOrProvinceCode', 'LIKE', "%$skey%");
-        })->orderBy($sortField,$sortflag)->get();
-    }
+            })->orderBy($sortField, $sortflag)->paginate($limit, ['*'], 'page', $page);
+        }
 
-    return response()->json(
-        collect([
-            'response' => 'success',
-            'orignalAddress'=>$get,
-            'defaultAddress'=>$defaultAddress
-        ]));  
-}
+        return response()->json(
+            collect([
+                'response' => 'success',
+                'orignalAddress' => $get,
+                'defaultAddress' => $defaultAddress
+            ])
+        );
+    }
 
 
     function LocationDataByID($id) {

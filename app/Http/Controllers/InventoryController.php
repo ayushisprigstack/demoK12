@@ -39,7 +39,8 @@ use App\Models\Building;
 class InventoryController extends Controller {
 
     public function uploadInventory(Request $request) {
-//        try {
+        try {
+             set_time_limit(0);
             $userId = $request->input('ID');
             $schId = $request->input('schId');
             $flag = $request->input('flag');
@@ -350,10 +351,10 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
             }
 
             return 'success';
-//        } catch (\Throwable $error) {
-//
-//            return 'Something went wrong';
-//        }
+        } catch (\Throwable $error) {
+
+            return 'Something went wrong';
+        }
     }
 
     public function exportInventory($flag, $sid) {
@@ -470,7 +471,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
         return "success";
     }
 
-    function allInventories($sid, $flag, $key, $skey, $sflag,$page) {
+     function allInventories($sid, $flag, $key, $skey, $sflag,$page,$limit) {
         $inventory = InventoryManagement::leftJoin('student_inventories', 'student_inventories.Inventory_ID', '=', 'inventory_management.ID')
                 ->leftJoin('students', 'students.ID', '=', 'student_inventories.Student_ID')
                 ->leftJoin('buildings','buildings.ID','=','inventory_management.Building')
@@ -482,9 +483,9 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
                 })
                 ->select('inventory_management.*', 'students.Device_user_first_name', 'students.Device_user_last_name', 'students.Parent_guardian_name', 'students.Parent_Guardian_Email', 'students.Parent_phone_number', 'students.Parental_coverage', DB::raw('IF(tickets.ID IS NOT NULL,"redText"," ") as TicketFlag'),'tickets.ID as ticketId','students.Grade','buildings.Building as BuildingName');
 
-       
+
         if ($flag == 1 || $flag == 2) {
-            if ($key !== 'null') {                
+            if ($key !== 'null') {
                 $inventory->where(function ($query) use ($key) {
                     $query->Where('inventory_management.Building', 'LIKE', "%$key%")
                             ->orWhere('students.Grade', 'LIKE', "%$key%")
@@ -525,7 +526,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
                         'response' => 'error'
             ]));
         }
-        
+
         if ($skey == 1) {
             $sflag == 'as' ? $inventory->orderBy("inventory_management.Serial_number", "asc") : $inventory->orderBy("inventory_management.Serial_number", "desc");
         } elseif ($skey == 2) {
@@ -540,9 +541,9 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
             $sflag == 'as' ? $inventory->orderBy("inventory_management.Purchase_date", "asc") : $inventory->orderBy("inventory_management.Purchase_date", "desc");
         }else {
         $inventory->orderByDesc('inventory_management.ID');
-    } 
-     $data = $inventory->get();     
-     $data = $inventory->paginate(15, ['*'], 'page',$page);
+    }
+     $data = $inventory->get();
+     $data = $inventory->paginate($limit, ['*'], 'page',$page);
         return response()->json(
                         collect([
                     'response' => 'success',

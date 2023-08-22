@@ -48,10 +48,11 @@ use App\Http\Controllers\FedexController;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Location;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 class SchoolBatchController extends Controller {
 
     function saveSchoolBatches(Request $request) {
-         $schoolBatch = new SchoolBatch;
+        $schoolBatch = new SchoolBatch;
         $schoolBatch->BatchName = $request->input('BatchName');
         $schoolBatch->Notes = $request->input('Notes');
         $schoolBatch->SchoolId = $request->input('SchoolId');
@@ -114,12 +115,12 @@ class SchoolBatchController extends Controller {
                                     'batchnotes' => $schoolBatch->Notes,
                                     'totaltickets' => $count,
                                 ];
-                               
+
                                 try {
-                                 Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
+                                    Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
+                                } catch (\Exception $e) {
+                                    Log::error("Mail sending failed: " . $e->getMessage());
+                                }
                             } else {
                                 $staffmember = User::where('id', $recipent->UserID)->first();
                                 $data = [
@@ -129,7 +130,7 @@ class SchoolBatchController extends Controller {
                                     'batchnotes' => $schoolBatch->Notes,
                                     'totaltickets' => $count,
                                 ];
-                               
+
                                 try {
                                     Mail::to($staffmember->email)->send(new incomingBatchMailer($data));
                                 } catch (\Exception $e) {
@@ -137,9 +138,9 @@ class SchoolBatchController extends Controller {
                                 }
                             }
                         }
-                         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-                      $imageData = file_get_contents($shipmentData['url']);                       
-                        $filename = 'FedExQrCodes/' . $schoolBatch->id .$randomString.'.jpg'; // assuming JPEG format, adjust extension if different
+                        $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+                        $imageData = file_get_contents($shipmentData['url']);
+                        $filename = 'FedExQrCodes/' . $schoolBatch->id . $randomString . '.jpg'; // assuming JPEG format, adjust extension if different
 // Save to public directory
                         Storage::disk('public')->put($filename, $imageData);
                         if (!Storage::disk('public')->exists('FedExQrCodes')) {
@@ -180,14 +181,12 @@ class SchoolBatchController extends Controller {
                             'batchnotes' => $schoolBatch->Notes,
                             'totaltickets' => $count,
                         ];
-                        
-                        
+
                         try {
-                               Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
-                        
+                            Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
+                        } catch (\Exception $e) {
+                            Log::error("Mail sending failed: " . $e->getMessage());
+                        }
                     } else {
                         $staffmember = User::where('id', $recipent->UserID)->first();
                         $data = [
@@ -198,11 +197,10 @@ class SchoolBatchController extends Controller {
                             'totaltickets' => $count,
                         ];
                         try {
-                               Mail::to($staffmember->email)->send(new incomingBatchMailer($data));
-                            } catch (\Exception $e) {
-                                Log::error("Mail sending failed: " . $e->getMessage());
-                            }
-                        
+                            Mail::to($staffmember->email)->send(new incomingBatchMailer($data));
+                        } catch (\Exception $e) {
+                            Log::error("Mail sending failed: " . $e->getMessage());
+                        }
                     }
                 }
             }
@@ -212,6 +210,7 @@ class SchoolBatchController extends Controller {
             ]);
         }
     }
+
 
     function getAllSchoolBatch($sid, $skey, $sortkey, $sflag) {
         $sortField = '';
@@ -234,6 +233,7 @@ class SchoolBatchController extends Controller {
             ]);
         }
     }
+
 
     function getSchoolBatchData($bid) {
         $get = SchoolBatchLog::with('ticket')->where('BatchID', $bid)->get()->groupBy('BatchID')->map(function ($items) {

@@ -6,23 +6,22 @@ use App\Models\PartSKUs;
 use Illuminate\Http\Request;
 class MasterInventoryController extends Controller
 {
-    function GetAllMasterInventory($skey,$flag)
- {
+  function GetAllMasterInventory($skey, $flag, $page, $limit)
+    {
         if ($skey == 'null') {
-            $masterparts = PartSKUs::where('School_ID', null)->orderBy('Title',$flag)->get();
+            $masterparts = PartSKUs::where('School_ID', null)->orderBy('Title', $flag)->paginate($limit, ['*'], 'page', $page);
         } else {
             $masterparts = PartSKUs::where('School_ID', null)->where(function ($query) use ($skey) {
-                        $query->where('Title', 'LIKE', "%$skey%");
-                    })->orderBy('Title',$flag)->get();
+                $query->where('Title', 'LIKE', "%$skey%");
+            })->orderBy('Title', $flag)->paginate($limit, ['*'], 'page', $page);
         }
         return response()->json(
-                        collect([
-                    'response' => 'success',
-                    'MasterSku' => $masterparts,
-                        ])
+            collect([
+                'response' => 'success',
+                'MasterSku' => $masterparts,
+            ])
         );
     }
-
     function GetMasterInventoryById($id)
     {
         $part = PartSKUs::where('ID', $id)->first();

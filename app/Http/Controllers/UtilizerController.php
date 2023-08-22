@@ -278,7 +278,7 @@ class UtilizerController extends Controller {
         ));
     }
 
- function UtilizerData($sid, $key, $skey, $flag, $page) {
+ function UtilizerData($sid, $key, $skey, $flag, $page,$limit) {
         $subQuery = DB::table('students as s')
                 ->leftJoin('student_inventories as si', 'si.Student_ID', '=', 's.ID')
                 ->leftJoin('inventory_management as im1', 'im1.ID', '=', 'si.Inventory_ID')
@@ -312,8 +312,8 @@ class UtilizerController extends Controller {
                         DB::raw('ANY_VALUE(sub.Parent_phone_number) as Parent_phone_number'),
                         DB::raw('ANY_VALUE(sub.Student_num) as Student_num'),
                         DB::raw('ANY_VALUE(sub.Grade) as Grade'),
-                        DB::raw('CONCAT(GROUP_CONCAT(sub.inventory_serial_number), ",", GROUP_CONCAT(sub.loner_serial_number)) as Serial_number'),
-                        DB::raw('CONCAT(GROUP_CONCAT(sub.inventory_ID), ",", GROUP_CONCAT(sub.loner_ID)) as Inventory_IDs')
+                        DB::raw('CASE WHEN TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_serial_number, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_serial_number, "")))) = "" THEN null ELSE TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_serial_number, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_serial_number, "")))) END as Serial_number'),
+                        DB::raw('CASE WHEN TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_ID, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_ID, "")))) = "" THEN null ELSE TRIM(BOTH "," FROM CONCAT(GROUP_CONCAT(IFNULL(sub.inventory_ID, "")), ",", GROUP_CONCAT(IFNULL(sub.loner_ID, "")))) END as Inventory_IDs')
                 )
                 ->groupBy('sub.utilizerid');
 
@@ -335,7 +335,7 @@ class UtilizerController extends Controller {
         }
 
         $totalCount = $query->get()->count();
-        $utilizerData = $query->paginate(15, ['*'], 'page', $page);
+        $utilizerData = $query->paginate($limit, ['*'], 'page', $page);
         $collection = $utilizerData->getCollection();
         $searchResults = $collection;
 

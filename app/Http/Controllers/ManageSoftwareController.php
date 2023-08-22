@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\ManageSoftware;
 use Illuminate\Http\Request;
 use Aws\S3\S3Client;
-
+use Illuminate\Support\Facades\Storage;
 class ManageSoftwareController extends Controller
 {
-    function GetAllSoftware($sid,$searchkey,$skey,$sflag)
+    function GetAllSoftware($sid, $searchkey, $skey, $sflag, $page, $limit)
     {
         $softwareQuery = ManageSoftware::where('school_id', $sid);
         if ($searchkey != 'null') {
@@ -21,8 +21,8 @@ class ManageSoftwareController extends Controller
                     ->orWhere('License_length', 'LIKE', '%' . $searchkey . '%');
             });
         }
-        
-         if ($skey == 1) {
+
+        if ($skey == 1) {
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Name') : $softwareQuery->orderByDesc('Name');
         } elseif ($skey == 2) {
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Date_Purchased') : $softwareQuery->orderByDesc('Date_Purchased');
@@ -30,11 +30,11 @@ class ManageSoftwareController extends Controller
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Cost') : $softwareQuery->orderByDesc('Cost');
         } elseif ($skey == 4) {
             $softwareQuery = $sflag == 'as' ? $softwareQuery->orderBy('Buildings') : $softwareQuery->orderByDesc('Buildings');
-        }else{
-          $softwareQuery->orderByDesc('ID');
+        } else {
+            $softwareQuery->orderByDesc('ID');
         }
-               
-        $software = $softwareQuery->get();
+
+        $software = $softwareQuery->paginate($limit, ['*'], 'page', $page);
         return response()->json(
             collect([
                 'response' => 'success',

@@ -63,28 +63,53 @@ class BuildingController extends Controller {
          return 'success';
     }
     
-    function allBuildings($sid,$skey,$sortkey,$sflag)
-    {
-        if($skey == 'null'){
-             $get = Building::where('SchoolID',$sid)->orderByDesc('ID')->get();
-        }else{
-            $get = Building::where('SchoolID', $sid)->where(function ($query) use ($skey) {
-                        $query->where('Building', 'LIKE', "%$skey%");
-                    })->orderByDesc('ID')->get();
-        }
-        
-        if ($sortkey == 1) {
-            $get = $sflag == 'desc' ? $get->sortByDesc('Building') : $get->sortBy('Building');
-        } elseif ($sortkey == 2) {
-            $get = $sflag == 'desc' ? $get->sortByDesc('created_at') : $get->sortBy('created_at');
-        }
-       $get = $get->values();
-       
-        return response()->json(
-                        collect([
-                    'response' => 'success',
-                    'msg' => $get,
-        ]));
+function allBuildings($sid, $skey, $sortkey, $sflag, $page, $limit)
+{
+    $query = ($skey == 'null')
+        ? Building::where('SchoolID', $sid)
+        : Building::where('SchoolID', $sid)->where(function ($query) use ($skey) {
+            $query->where('Building', 'LIKE', "%$skey%");
+        });
+
+    if ($page !== 'null') {
+        $results = $query->paginate($limit, ['*'], 'page', $page);
+        $data = $results->items();
+    } else {
+        $data = $query->get();
     }
+
+    if ($sortkey == 1) {
+        $sortColumn = 'Building';
+    } elseif ($sortkey == 2) {
+        $sortColumn = 'created_at';
+    } else {
+        $sortColumn = 'ID';
+    }
+
+    $sortDirection = ($sflag == 'desc') ? SORT_DESC : SORT_ASC;
+
+    // Sort only the paginated results or the retrieved data
+    usort($data, function ($a, $b) use ($sortColumn, $sortDirection) {
+        if ($a[$sortColumn] == $b[$sortColumn]) return 0;
+        if ($sortDirection == SORT_DESC) {
+            return $a[$sortColumn] > $b[$sortColumn] ? -1 : 1;
+        } else {
+            return $a[$sortColumn] < $b[$sortColumn] ? -1 : 1;
+        }
+    });
+
+    if ($page !== 'null') {
+        $results->setCollection(collect($data));
+    } else {
+        $results = $data;
+    }
+
+    return response()->json([
+        'response' => 'success',
+        'msg' => $results
+    ]);
+}
+
+
 
 }

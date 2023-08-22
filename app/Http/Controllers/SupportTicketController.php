@@ -31,70 +31,70 @@ use App\Models\SupportTicketAssignment;
 use Illuminate\Support\Facades\Log;
 class SupportTicketController extends Controller {
 
-    function getAllSupportTickets($skey,$sid,$uid,$flag,$sortkey,$sflag) {
-        //flag = 1 for techno 
+    function getAllSupportTickets($skey, $sid, $uid, $flag, $sortkey, $sflag, $page, $limit)
+    {
         $getUser = User::where('id', $uid)->first();
-        $get = SupportTicket::with('user')
-                ->where('Type', $flag)
-                ->where('SchoolId', $sid)
-                ->when($getUser->access_type != 1, function ($query) use ($uid) {
-            $query->where('AssignedTo', $uid);
-        });
 
-        $Open_ticket_array = [];
-        $Close_ticket_array = [];
+        $openTicketsQuery = SupportTicket::with('user')
+            ->where('Type', $flag)
+            ->where('SchoolId', $sid)
+            ->when($getUser->access_type != 1, function ($query) use ($uid) {
+                $query->where('AssignedTo', $uid);
+            })
+            ->where('Status', 'Open');
 
+        $closeTicketsQuery = SupportTicket::with('user')
+            ->where('Type', $flag)
+            ->where('SchoolId', $sid)
+            ->when($getUser->access_type != 1, function ($query) use ($uid) {
+                $query->where('AssignedTo', $uid);
+            })
+            ->where('Status', 'Closed');
         if ($skey != 'null') {
-            $get = $get->where(function ($query) use ($skey) {
+            $openTicketsQuery = $openTicketsQuery->where(function ($query) use ($skey) {
                 $query->where('ID', 'LIKE', "%$skey%")
-                        ->orWhere('Name', 'LIKE', "%$skey%")
-                        ->orWhere('Role', 'LIKE', "%$skey%")
-                        ->orWhere('Email', 'LIKE', "%$skey%")
-                        ->orWhere('Title', 'LIKE', "%$skey%");
+                    ->orWhere('Name', 'LIKE', "%$skey%")
+                    ->orWhere('Role', 'LIKE', "%$skey%")
+                    ->orWhere('Email', 'LIKE', "%$skey%")
+                    ->orWhere('Title', 'LIKE', "%$skey%");
+            });
+
+            $closeTicketsQuery = $closeTicketsQuery->where(function ($query) use ($skey) {
+                $query->where('ID', 'LIKE', "%$skey%")
+                    ->orWhere('Name', 'LIKE', "%$skey%")
+                    ->orWhere('Role', 'LIKE', "%$skey%")
+                    ->orWhere('Email', 'LIKE', "%$skey%")
+                    ->orWhere('Title', 'LIKE', "%$skey%");
             });
         }
 
         if ($sortkey == 1) {
-            $get = $sflag == 'as' ? $get->orderBy('Name') : $get->orderByDesc('Name');
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('Name') : $openTicketsQuery->orderByDesc('Name');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('Name') : $closeTicketsQuery->orderByDesc('Name');
         } elseif ($sortkey == 2) {
-            $get = $sflag == 'as' ? $get->orderBy('Email') : $get->orderByDesc('Email');
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('Email') : $openTicketsQuery->orderByDesc('Email');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('Email') : $closeTicketsQuery->orderByDesc('Email');
         } elseif ($sortkey == 3) {
-            $get = $sflag == 'as' ? $get->orderBy('Title') : $get->orderByDesc('Title');
-        }elseif ($sortkey == 4) {
-            $get = $sflag == 'as' ? $get->orderBy('AssignedTo') : $get->orderByDesc('AssignedTo');
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('Title') : $openTicketsQuery->orderByDesc('Title');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('Title') : $closeTicketsQuery->orderByDesc('Title');
+        } elseif ($sortkey == 4) {
+            $openTicketsQuery = $sflag == 'as' ? $openTicketsQuery->orderBy('AssignedTo') : $openTicketsQuery->orderByDesc('AssignedTo');
+            $closeTicketsQuery = $sflag == 'as' ? $closeTicketsQuery->orderBy('AssignedTo') : $closeTicketsQuery->orderByDesc('AssignedTo');
+        } else {
+            $openTicketsQuery->orderByDesc('ID');
+            $closeTicketsQuery->orderByDesc('ID');
         }
-        else{
-             $get->orderByDesc('ID');
-        }
 
+        // Paginate Open Tickets
+        $openTickets = $openTicketsQuery->paginate($limit, ['*'], 'open_tickets_page', $page);
 
-       
-        $tickets = $get->get();
-
-        foreach ($tickets as $ticket) {
-            switch ($ticket->Role) {
-                case 1:
-                    $ticket->RoleName = 'Student/Parent';
-                    break;
-                case 2:
-                    $ticket->RoleName = 'Teacher';
-                    break;            
-                default:
-                    $ticket->RoleName = 'null';
-                    break;
-            }
-
-            if ($ticket->Status == 'Open') {
-                $Open_ticket_array[] = $ticket;
-            } else {
-                $Close_ticket_array[] = $ticket;
-            }
-        }
+        // Paginate Close Tickets
+        $closeTickets = $closeTicketsQuery->paginate($limit, ['*'], 'close_tickets_page', $page);
 
         return response()->json([
-                    'status' => 'success',
-                    'OpenTickets' => $Open_ticket_array,
-                    'CloseTickets' => $Close_ticket_array,
+            'status' => 'success',
+            'OpenTickets' => $openTickets,
+            'CloseTickets' => $closeTickets,
         ]);
     }
 

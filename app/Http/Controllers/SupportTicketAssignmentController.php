@@ -31,23 +31,29 @@ use App\Models\SupportTicketAssignment;
 
 class SupportTicketAssignmentController extends Controller {
 
-    function getAllSupportTicketAssignment($sid, $skey) {
-        $get = SupportTicketAssignment::with('building', 'assignTo.avtardata')
-                ->where('school_id', $sid)
-                ->when($skey != 'null', function ($query) use ($skey) {
-                    $query->where(function ($query) use ($skey) {
-                        $query->whereHas('building', function ($q) use ($skey) {
-                            $q->where('Building', 'LIKE', "%$skey%");
-                        })
-                        ->orWhereHas('assignTo', function ($q) use ($skey) {
-                            $q->where('first_name', 'LIKE', "%$skey%")
-                            ->orWhere('last_name', 'LIKE', "%$skey%");
-                        });
-                    });
-                })
-                ->orderBy('ID', 'desc')
-                ->get();
+   function getAllSupportTicketAssignment($sid, $skey, $page, $limit)
+    {
+        // Assuming $page and $limit are passed as parameters
 
+        $query = SupportTicketAssignment::with('building', 'assignTo.avtardata')
+            ->where('school_id', $sid)
+            ->when($skey != 'null', function ($query) use ($skey) {
+                $query->where(function ($query) use ($skey) {
+                    $query->whereHas('building', function ($q) use ($skey) {
+                        $q->where('Building', 'LIKE', "%$skey%");
+                    })
+                    ->orWhereHas('assignTo', function ($q) use ($skey) {
+                        $q->where('first_name', 'LIKE', "%$skey%")
+                        ->orWhere('last_name', 'LIKE', "%$skey%");
+                    });
+                });
+            })
+            ->orderBy('ID', 'desc');
+
+        // Paginate the results
+        $get = $query->paginate($limit, ['*'], 'page', $page);
+
+        // Modify the items in the collection as you did before
         $get->each(function ($data) {
             $data->buildingName = $data->building->Building ?? null;
             $data->assignToName = $data->assignTo->first_name . ' ' . $data->assignTo->last_name;
@@ -55,10 +61,12 @@ class SupportTicketAssignmentController extends Controller {
         });
         $get->makeHidden(['building', 'assignTo', 'created_at', 'updated_at', 'deleted_at']);
 
-        return Response::json(array(
-                    'status' => "success",
-                    'msg' => $get));
+        return Response::json([
+            'status' => "success",
+            'msg' => $get
+        ]);
     }
+
 
     function getSupportTicketAssignmentByID($id) {
         $get = SupportTicketAssignment::with('building', 'assignTo')->where('ID', $id)->first();
