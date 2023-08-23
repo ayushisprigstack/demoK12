@@ -86,8 +86,8 @@ class BuildingController extends Controller
         }
 
         $sortDirection = ($sflag == 'desc') ? 'desc' : 'asc';
-        if ($page == 'null') {
-            $results = $query->orderBy($sortColumn, $sortDirection);
+        if ($page == 'null') {          
+            $results = $query->get();
         } else {
             $results = $query->orderBy($sortColumn, $sortDirection)->paginate($limit, ['*'], 'page', $page);
         }

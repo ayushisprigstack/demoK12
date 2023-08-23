@@ -13,7 +13,11 @@ class Student extends Model
 {
     use HasApiTokens, HasFactory, Notifiable,SoftDeletes;
     protected $table="students";
-     
+    
+    protected $fillable = [
+        'stripeCustomerID'      
+    ];
+    
     public function inventoryManagement() {
     return $this->belongsTo(InventoryManagement::class,'Inventory_ID', 'ID');
     }

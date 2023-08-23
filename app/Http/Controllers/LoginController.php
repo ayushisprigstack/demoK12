@@ -15,6 +15,7 @@ use App\Models\Domain;
 use App\Models\MenuAccess;
 use App\Models\Menu;
 use App\Mail\RegisterMailer;
+use App\Mail\SameDomainSchoolRegisterMailer;
 use App\Mail\SignUpMailer;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Access;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use App\Models\NotificationEvents;
 use App\Models\NotificationEventsLog;
+
 class LoginController extends Controller {
 
     function Register(Request $request) {
@@ -107,24 +109,35 @@ class LoginController extends Controller {
         $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
         $response = $request->input('Captcha');
         $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
-        if ($resp->isSuccess()) {
-            //email domain is match with db domain
-            foreach ($domainalldata as $data) {
-                $dataEmailDomain = $data->Name;
-                if ($requstedEmailDomain == $dataEmailDomain && $data->Status == 'active') {
-                    $status = 'true';
-                }
+//        if ($resp->isSuccess()) {
+        //email domain is match with db domain
+        foreach ($domainalldata as $data) {
+            $dataEmailDomain = $data->Name;
+            if ($requstedEmailDomain == $dataEmailDomain && $data->Status == 'active') {
+                $status = 'true';
             }
-            $userdata = User::where('email', $email)->first();
-            if (isset($userdata)) {
-                return Response::json(array(
-                            'response' => 'Already register',
-                            'msg' => 'Your account is already registered with us.',
-                            'status' => 'error',
-                ));
-            } else {
-                //new entry in sch table nd user table with approve  or if sch name is already in school table gave error
-                if ($status == 'true') {
+        }
+        $userdata = User::with('school')->where('email', $email)->first();
+        if (isset($userdata)) {
+            return Response::json(array(
+                        'response' => 'Already register',
+                        'msg' => 'The email you are trying to Sign in with has already  added under the staffmembers of ' . $userdata->school->name . '',
+                        'status' => 'error',
+            ));
+        } else {
+            if ($status == 'true') {
+
+                //now check user table 
+                $domainCheck = User::where('status', 'Approve')->where('email', 'LIKE', '%@' . $requstedEmailDomain)->first();
+                if (isset($domainCheck)) {
+
+                    return Response::json(array(
+                                'response' => 'Same Domain School Already register',
+                                'msg' => 'School with this domain is already register you want to register new one ?',
+                                'status' => 'error',
+                                'flag' => 1
+                    ));
+                } else {
                     $schooldata = School::where('Name', $schoolname)->first();
                     if (isset($schooldata)) {
                         return Response::json(array(
@@ -133,6 +146,7 @@ class LoginController extends Controller {
                                     'status' => 'error',
                         ));
                     } else {
+
                         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
                         $school = new School;
                         $school->name = $schoolname;
@@ -154,12 +168,6 @@ class LoginController extends Controller {
                     $user->avtar = $avatar[0]->id;
                     $user->save();
                     //admin table 
-                    $admin = new AdminSetting;
-                    $admin->School_ID = $school->id;
-                    $admin->Admin_Mail = $user->email;
-                    $admin->Admin_ID = $user->id;
-                    $admin->save();
-
                     //mail send
                     $schoolname = School::where('ID', $user->school_id)->select('name')->first();
                     $data = [
@@ -176,10 +184,10 @@ class LoginController extends Controller {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }
 
-                   $ccRecipients = NotificationEventsLog::where('EventID',6)->pluck('UserID')->all();
+                    $ccRecipients = NotificationEventsLog::where('EventID', 6)->pluck('UserID')->all();
                     if (isset($ccRecipients)) {
                         foreach ($ccRecipients as $recipent) {
-                            $staffmember = User::where('id', $recipent->UserID)->first();
+                            $staffmember = User::where('id', $recipent)->first();
                             $data = [
                                 'name' => $staffmember->first_name . '' . $staffmember->last_name,
                                 'school_name' => $schoolname->name,
@@ -198,76 +206,134 @@ class LoginController extends Controller {
                                 'msg' => 'You are successfully signed up and your account is approved, you can go ahead and sign-in with the same email address',
                                 'status' => 'success',
                     ));
+                }
+            } else {
+                $user = new User;
+                $user->first_name = $firstname;
+                $user->last_name = $lastname;
+                $user->email = $email;
+                $user->status = 'Reject';
+                $user->save();
+
+                $checkDomain = Domain::where('Name', $requstedEmailDomain)->first();
+                if (isset($checkDomain)) {
+                    Domain::where('Name', $requstedEmailDomain)->update(['Status' => 'deactive']);
                 } else {
-                    $user = new User;
-                    $user->first_name = $firstname;
-                    $user->last_name = $lastname;
-                    $user->email = $email;
-                    $user->status = 'Reject';
-                    $user->save();
+                    $domain = new Domain;
+                    $domain->Name = $requstedEmailDomain;
+                    $domain->Status = 'deactive';
+                    $domain->save();
+                }
+                $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+                $school = new School;
+                $school->name = $schoolname;
+                $school->status = 'Deactive';
+                $school->schoolNumber = $randomString;
+                $school->location = 1;
+                $school->save();
 
-                    $checkDomain = Domain::where('Name', $requstedEmailDomain)->first();
-                    if (isset($checkDomain)) {
-                        Domain::where('Name', $requstedEmailDomain)->update(['Status' => 'deactive']);
-                    } else {
-                        $domain = new Domain;
-                        $domain->Name = $requstedEmailDomain;
-                        $domain->Status = 'deactive';
-                        $domain->save();
-                    }
-                    $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-                    $school = new School;
-                    $school->name = $schoolname;
-                    $school->status = 'Deactive';
-                    $school->schoolNumber = $randomString;
-                    $school->location = 1;
-                    $school->save();
+                $data = [
+                    'name' => $firstname . '' . $lastname,
+                    'email' => $email,
+                    'school_name' => $schoolname,
+                    'domain' => $requstedEmailDomain,
+                ];
 
+                $mainUser = 'team.sprigstack@gmail.com';
+
+                try {
+                    Mail::to($mainUser)->send(new RegisterMailer($data, 'emails.newSchoolWithoutDomainAdd'));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: " . $e->getMessage());
+                }
+
+
+
+                $ccRecipients = NotificationEventsLog::where('EventID', 6)->pluck('UserID')->all();
+                foreach ($ccRecipients as $recipent) {
+                    $staffmember = User::where('id', $recipent)->first();
                     $data = [
-                        'name' => $firstname . '' . $lastname,
-                        'email' => $email,
+                        'name' => $staffmember->first_name . '' . $staffmember->last_name,
                         'school_name' => $schoolname,
-                        'domain' => $requstedEmailDomain,
+                        'domain' => $requstedEmailDomain
                     ];
-
-                    $mainUser = 'team.sprigstack@gmail.com';
-
                     try {
-                        Mail::to($mainUser)->send(new RegisterMailer($data, 'emails.newSchoolWithoutDomainAdd'));
+                        Mail::to($staffmember->email)->send(new SignUpMailer($data, 'emails.signUpMail'));
                     } catch (\Exception $e) {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }
-
-
-
-                    $ccRecipients = NotificationEventsLog::where('EventID',6)->pluck('UserID')->all();
-                    foreach ($ccRecipients as $recipent) {
-                        $staffmember = User::where('id', $recipent->UserID)->first();
-                        $data = [
-                            'name' => $staffmember->first_name . '' . $staffmember->last_name,
-                            'school_name' => $schoolname,
-                            'domain' => $requstedEmailDomain
-                        ];
-                        try {
-                            Mail::to($staffmember->email)->send(new SignUpMailer($data, 'emails.signUpMail'));
-                        } catch (\Exception $e) {
-                            Log::error("Mail sending failed: " . $e->getMessage());
-                        }
-                    }
-                    return Response::json(array(
-                                'response' => 'Reject',
-                                'msg' => 'You are successfully signed up, system administrator will contact you soon to get your account approved!',
-                                'status' => 'error'
-                    ));
                 }
+                return Response::json(array(
+                            'response' => 'Reject',
+                            'msg' => 'You are successfully signed up, system administrator will contact you soon to get your account approved!',
+                            'status' => 'error'
+                ));
             }
-        } else {
-            return Response::json(array(
-                        'response' => 'Reject',
-                        'msg' => 'Invalid Captcha!',
-                        'status' => 'error'
-            ));
         }
+//        } else {
+//            return Response::json(array(
+//                        'response' => 'Reject',
+//                        'msg' => 'Invalid Captcha!',
+//                        'status' => 'error'
+//            ));
+//    }
+    }
+
+    function sameDomainSchoolContinueClick(Request $request) {
+        $firstname = $request->input('FirstName');
+        $lastname = $request->input('lastname');
+        $email = $request->input('email');
+        $schoolname = $request->input('schoolname');
+        $requstedEmailDomain = substr(strrchr($email, "@"), 1);
+        $domainCheckInUser = User::where('status', 'Approve')->where('email', 'LIKE', '%@' . $requstedEmailDomain)->first();
+
+        $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+        $school = new School;
+        $school->name = $schoolname;
+        $school->status = 'Deactive';
+        $school->schoolNumber = $randomString;
+        $school->location = 1;
+        $school->save();
+
+        $user = new User;
+        $user->first_name = $firstname;
+        $user->last_name = $lastname;
+        $user->email = $email;
+        $user->school_id = $school->id;
+        $user->access_type = 1;
+        $user->status = 'Reject';
+        $allAvtars = Avtar::all();
+        $avatarId = $allAvtars[0];
+        $avatar = Avtar::find($avatarId);
+        $user->avtar = $avatar[0]->id;
+        $user->save();
+        $link = 'http://localhost:3000/';
+        $url = $link . 'confirmsignin' . '/' . $school->id;
+        $data = [
+            'name' => $firstname . '' . $lastname,
+            'school_name' => $schoolname,
+            'domain' => $requstedEmailDomain,
+            'email' => $email,
+            'link' => $url,
+        ];
+
+        try {
+            Mail::to($domainCheckInUser->id)->send(new SameDomainSchoolRegisterMailer($data, 'emails.sameDomainSchoolRegister'));
+        } catch (\Exception $e) {
+            Log::error("Mail sending failed: " . $e->getMessage());
+        }
+
+        return Response::json(array(
+                    'link' => $url,
+                    'status' => 'success'
+        ));
+    }
+
+    function sameDomainSchoolConfirmClick(Request $request) {
+        $schoolId = $request->input('schoolId');
+        School::where('ID', $schoolId)->update(['status' => 'Active']);
+        User::where('school_id', $schoolId)->update(['status' => 'Approve']);
+        return 'success';
     }
 
     function menuAccess($uid) {
@@ -332,25 +398,13 @@ class LoginController extends Controller {
                     'user' => $userType
         ]);
     }
-    function middlewareTesting(){
+
+    function middlewareTesting() {
         try {
             return 'success';
         } catch (Exception $ex) {
             return $ex;
         }
     }
-    }
 
-function setmenuAccess() {
-    $accesstype = Access::all();
-    foreach ($accesstype as $data) {
-        $menu = Menu::all();
-        foreach ($menu as $menudata) {
-            $new = new MenuAccess;
-            $new->Access_type = $data->ID;
-            $new->Menu = $menudata->ID;
-            $new->Status = 'Active';
-            $new->save();
-        }
-    }
 }

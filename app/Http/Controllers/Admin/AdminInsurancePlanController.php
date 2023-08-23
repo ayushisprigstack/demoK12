@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\SchoolSideParentalCoverageMailer;
 use App\Mail\adminSetPricingForInsurancePlanMailer;
+use App\Mail\ContactUsMailer;
 use App\Mail\InsurancePlanNegotiationMailer;
 use App\Models\InvoiceLog;
 use App\Models\PartSKUs;
@@ -56,9 +57,11 @@ use Illuminate\Http\Request;
 use Stripe\Stripe;
 use Stripe\Charge;
 use Stripe\Customer;
+use ReCaptcha\ReCaptcha;
 use Stripe\Exception\CardException;
 use App\Models\NotificationEvents;
 use App\Models\NotificationEventsLog;
+use App\Models\ContactUs;
 class AdminInsurancePlanController extends Controller {
 
    function AddUpdateInsurancePlan(Request $request) {
@@ -73,63 +76,63 @@ class AdminInsurancePlanController extends Controller {
         $otherProductsArray = $request->input('OtherProducts');
         $planID = $request->input('PlanID');
         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-        if($planID == 0){
+        CoverdServiceLog::where('PlanID', $planID)->forceDelete();
+        CoverdDeviceModelLog::where('PlanID',$planID)->forceDelete();
+        if ($planID == 0) {
             $insurancePlan = new InsurancePlan;
 
-        $insurancePlan->SchoolID = $schoolID;
-        $insurancePlan->PlanName = $planName;
-        $insurancePlan->SchoolName = $schoolName;
-        $insurancePlan->ContactName = $contactName;
-        $insurancePlan->ContactEmail = $contactEmail;
-        $insurancePlan->EstimatedEnrollment = $estimatedStudent;
-        $insurancePlan->DevicesNotLeaveSchool = $prcofDevices;
-        $insurancePlan->PlanNum = $randomString;
-        $insurancePlan->save();
+            $insurancePlan->SchoolID = $schoolID;
+            $insurancePlan->PlanName = $planName;
+            $insurancePlan->SchoolName = $schoolName;
+            $insurancePlan->ContactName = $contactName;
+            $insurancePlan->ContactEmail = $contactEmail;
+            $insurancePlan->EstimatedEnrollment = $estimatedStudent;
+            $insurancePlan->DevicesNotLeaveSchool = $prcofDevices;
+            $insurancePlan->PlanNum = $randomString;
+            $insurancePlan->save();
 
-        $deviceModelsnames = explode(',', $deviceModels);
-        foreach ($deviceModelsnames as $name) {
+            $deviceModelsnames = explode(',', $deviceModels);
+            foreach ($deviceModelsnames as $name) {
 
-            $coverdmodel = new CoverdDeviceModelLog;
-            $coverdmodel->Device = $name;
-            $coverdmodel->PlanID = $insurancePlan->id;
-            $coverdmodel->save();
-        }
+                $coverdmodel = new CoverdDeviceModelLog;
+                $coverdmodel->Device = $name;
+                $coverdmodel->PlanID = $insurancePlan->id;
+                $coverdmodel->save();
+            }
 
-        foreach ($otherProductsArray as $otherproduct) {
-            $coverdproduct = new CoverdServiceLog();
-            $coverdproduct->PlanID = $insurancePlan->id;
-            $coverdproduct->ServiceID = $otherproduct['id'];
-            $coverdproduct->save();
+            foreach ($otherProductsArray as $otherproduct) {
+                $coverdproduct = new CoverdServiceLog();
+                $coverdproduct->PlanID = $insurancePlan->id;
+                $coverdproduct->ServiceID = $otherproduct['id'];
+                $coverdproduct->save();
+            }
+        } else {
+            InsurancePlan::where('ID', $planID)->update(['PlanName' => $planName, 'ContactName' => $contactName, 'ContactEmail' => $contactEmail, 'EstimatedEnrollment' => $estimatedStudent, 'DevicesNotLeaveSchool' => $prcofDevices]);
+            $insurancePlan = InsurancePlan::where('ID', $planID)->first();
+            $deviceModelsnames = explode(',', $deviceModels);
+            foreach ($deviceModelsnames as $name) {
+                $checkModels = CoverdDeviceModelLog::where('PlanID', $insurancePlan->ID)->where('Device', $name)->first();
+                if (empty($checkModels)) {
+                    $coverdmodel = new CoverdDeviceModelLog;
+                    $coverdmodel->Device = $name;
+                    $coverdmodel->PlanID = $insurancePlan->ID;
+                    $coverdmodel->save();
+                }
+
+                foreach ($otherProductsArray as $otherproduct) {
+                    $checkServices = CoverdServiceLog::where('PlanID', $insurancePlan->ID)->where('ServiceID', $otherproduct['id'])->first();
+
+                    if (empty($checkServices)) {
+                        $coverdproduct = new CoverdServiceLog();
+                        $coverdproduct->PlanID = $insurancePlan->ID;
+                        $coverdproduct->ServiceID = $otherproduct['id'];
+                        $coverdproduct->save();
+                    }
+                }
+            }
         }
-        }else{
-            InsurancePlan::where('ID', $planID)->update(['PlanName' => $planName, 'ContactName' =>$contactName ,'ContactEmail'=>$contactEmail,'EstimatedEnrollment'=>$estimatedStudent,'DevicesNotLeaveSchool'=>$prcofDevices]);
-            $insurancePlan = InsurancePlan::where('ID', $planID)->first();            
-             $deviceModelsnames = explode(',', $deviceModels);
-               foreach ($deviceModelsnames as $name) {
-                   $checkModels =  CoverdDeviceModelLog::where('PlanID',$insurancePlan->ID)->where('Device',$name)->first();
-                     if(empty($checkModels)){
-                      $coverdmodel = new CoverdDeviceModelLog;
-                      $coverdmodel->Device = $name;
-                      $coverdmodel->PlanID = $insurancePlan->ID;
-                      $coverdmodel->save();
-                     }
-                     
-                     foreach ($otherProductsArray as $otherproduct) { 
-                        $checkServices = CoverdServiceLog::where('PlanID',$insurancePlan->ID)->where('ServiceID',$otherproduct['id'])->first();
-                        
-                         if(empty($checkServices)){                             
-                    $coverdproduct = new CoverdServiceLog();
-                    $coverdproduct->PlanID = $insurancePlan->ID;
-                    $coverdproduct->ServiceID = $otherproduct['id'];
-                    $coverdproduct->save();
-                
-                         }
-                     }
-                         
-        }
-        }
-      return 'success';  
-   }
+        return 'success';
+    }
     function getAllOtherProducts() {
         $get = ProductsForInsurancePlan::all();
         return $get;
@@ -392,55 +395,50 @@ class AdminInsurancePlanController extends Controller {
         }
         return $plan;
     }
-    
-    function teststrip(IlluminateRequest $request) {
-        $studentNum = $request->input('StudentNo');
-        $stripToken = $request->input('token');
-        $email = $request->input('Email');
-        $student = Student::where('Student_num',$studentNum)->first();
-        $deposit = $request->input('Total');             
-        $test =  env('STRIPE_SECRET_KEY');
-        Stripe::setApiKey($test);
-      
-      try {
-            if ($student != ' ') {
-
-                try {
-
-                    $studentStripeID = $student->stripeCustomerID;
-                    if ($studentStripeID != '') {
-                        $stripeCustomer = Customer::retrieve($studentStripeID, []);
-                    } else {
-                        $stripeCustomer = Customer::create(array(
-                                    'source' => $stripToken,
-                                    'name' => 'test',
-                                    'email' => $email,
-                        ));
-
-                        Student::where('Student_num', $studentNum)->update(['stripeCustomerID' => $stripeCustomer->id]);
-                    }
-
-
-
-                    $charge = Charge::create([
-                                "amount" => $deposit * 100,
-                                "currency" => "usd",
-                                "customer" => $stripeCustomer,
-                                "description" => "Payment - " . 'Preet Patel'
-                    ]);
-
-                    $enrollmentDetails = new InsurancePlanEnrollment();
-                    $enrollmentDetails->SchoolID = 168;
-                    $enrollmentDetails->PlanID = 8;
-                    $enrollmentDetails->save();
-
-                    return response()->json(['success' => true, 'message' => 'Payment successful!']);
-                } catch (CardException $e) {
-                    return response()->json(['success' => false, 'message' => $e->getMessage(), 'CardException']);
-                }
+    function contactUs(Request $request) {
+        $studentNum = $request->input('StudentNumber');
+        $question = $request->input('Question');
+        $feedBack = $request->input('Feedback');
+        $planNum = $request->input('Plannumber');
+        $schoolId = $request->input('Schoolid');
+        $captcha = $request->input('Captcha');
+        $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
+        $response = $request->input('Captcha');
+        $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
+        if ($resp->isSuccess()) {
+            $contactUs = new ContactUs();
+            $contactUs->SchoolID = $schoolId;
+            $contactUs->StudentNum = $studentNum;
+            $contactUs->Question = $question;
+            $contactUs->FeedBack = $feedBack;
+            $contactUs->PlanNum = $planNum;
+            $contactUs->save();
+            
+          $user = User::where('school_id',$schoolId)->where('access_type',1)->orderBy('created_at', 'asc')->first();  
+          $planQuery = InsurancePlan::with('school')->where('PlanNum',$planNum)->first();
+         
+        $data = [
+            'school_name' => $planQuery->school->name,
+            'plannum' => $planQuery->PlanNum,
+            'planname' => $planQuery->PlanName,
+            'plancreateddate' => $planQuery->created_at->format('m-d-y'),
+            'name'=>$user->first_name.' '.$user->last_name
+        ];
+           
+            try {
+                Mail::to($user->email)->send(new ContactUsMailer($data));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage(),'Exception']);
+            
+            return response()->json([
+                        'status' => 'success'
+            ]);
+        } else {
+            return response()->json([
+                        'status' => 'error',
+                        'msg' => 'something went wrong'
+            ]);
         }
     }
 

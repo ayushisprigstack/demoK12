@@ -30,9 +30,10 @@ use App\Models\AdminCorporateStaffCcSetting;
 use App\Models\SchoolParentalCoverageCcSetting;
 use App\Models\NotificationEvents;
 use App\Models\NotificationEventsLog;
-
+use App\Models\Student;
 class SettingController extends Controller
 {
+   
 
     function allMembers($sid, $uid) {
         $getUser = User::where('id', $uid)->first();
@@ -111,8 +112,8 @@ class SettingController extends Controller
     function GetAllNotifications($sid,$flag) {
 //           $flag=1 for admin side
         $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID',$sid)->where('EventType',$flag)->get();
-
-        foreach ($getEventsData as $data) {
+        $getEvents = NotificationEvents::where('Type',$flag)->get();
+            foreach ($getEventsData as $data) {
             $data->eventName = $data->event->Events;
             $data->schoolName = $data->school->name;
             $data->userName = $data->user->first_name . ' ' . $data->user->last_name;
@@ -130,14 +131,17 @@ class SettingController extends Controller
                     ];
                 })->values();
 
-        return response()->json(['msg' => $transformed]);
+        return response()->json(['msg' => $transformed,'events'=>$getEvents]);
+        
+        
     }
     
-    function GetEmailsbyId($sid,$id, $skey)
- {
-          $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventID', $id)->pluck('UserID');
-        $user = User::whereNotIn('id', $getEventsData)->where('school_id', $sid)->get();
-        return Response::json(['msg' => $user]) ?? null;
+    function GetEmailsbyId($sid, $id, $skey) {
+        $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventID', $id)->pluck('UserID');
+        $alluser = User::whereNotIn('id', $getEventsData)->where('school_id', $sid)->get();
+        $selecteduser = User::whereIn('id', $getEventsData)->where('school_id', $sid)->get();
+        return Response::json(['alluser' => $alluser,
+                    'selected' => $selecteduser]) ?? null;
     }
 
     function SaveEmails(Request $request)

@@ -38,6 +38,7 @@ use App\Models\TechnicianLocation;
 use App\Models\Location;
 use App\Models\K12User;
 use App\Models\TicketRepairLog;
+use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller {
 
@@ -73,10 +74,11 @@ class AdminDashboardController extends Controller {
     }
 
     function adminDashboardData($startDate, $endDate, $lid,$sid) {
+        set_time_limit(0);
         $startDate = Carbon::createFromFormat('m-d-Y', $startDate)->startOfDay();
         $endDate = Carbon::createFromFormat('m-d-Y', $endDate)->endOfDay();
-        //////////technician               
-        $technicians = K12User::where('access_type', 6)->get();     
+        //////////technician    
+        $technicians = K12User::where('access_type', 6)->get();
         $technician_array = array();
         foreach ($technicians as $technician) {           
             $userData = User::where('email', $technician->email)->first();
@@ -95,23 +97,20 @@ class AdminDashboardController extends Controller {
                 }                
             }
 
-            $repairedTickets = TicketStatusLog::where('who_worked_on', $userData->id)->get();          
+         $repairedTickets = TicketStatusLog::where('who_worked_on', $userData->id)->whereBetween('created_at', [$startDate, $endDate])->get();          
             $CountsofTicket = TicketStatusLog::where('who_worked_on', $userData->id)->count();
-            $point = 0;
-            foreach ($repairedTickets as $repairedTicket) {
-
-                $ticketData = Ticket::where('ID', $repairedTicket->Ticket_id)->first();
-                if (isset($ticketData)) {                   
-                    $inventoryData = InventoryManagement::where('ID', $ticketData->inventory_id)->first();
-                    if (isset($inventoryData)) {
-                        $deviceTypeData = DeviceType::where('ID', $inventoryData->Device_type)->first();
-                        $point += $deviceTypeData->point ?? null;                    
-                }
+               $point = 0;
+                foreach ($repairedTickets as $repairedTicket) {                
+                    $ticketRepairLogData = TicketRepairLog::where('Ticket_Id', $repairedTicket->Ticket_id)->first();                   
+                    if ($ticketRepairLogData) {
+                        $deviceTypeData = DeviceType::where('ID', $ticketRepairLogData->DeviceType)->first();
+                        $point += $deviceTypeData->point ?? 0;
+                    }
+                }            
+                array_push($technician_array, ['TechnicianName' => $userData->first_name . ' ' . $userData->last_name, 'TechID' => $userData->id, 'Points' => $point, 'TotalTickets' => $CountsofTicket, 'locationName' => implode(',', $techLoc_array_name), 'locationID' => implode(',', $techLoc_array_id)]);
             }
-            }
-            array_push($technician_array, ['TechnicianName' => $userData->first_name . ' ' . $userData->last_name, 'TechID' => $userData->id, 'Points' => $point, 'TotalTickets' => $CountsofTicket, 'locationName' => implode(',', $techLoc_array_name), 'locationID' => implode(',', $techLoc_array_id)]);
-            }           
         }
+              
         /////////  school invoice 
 
         if ($lid == 'null' && $sid == 'null') {

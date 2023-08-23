@@ -13,7 +13,7 @@ class UniqueKeyMiddleware
         if (!$accessToken) {           
             return response()->json(['error' => 'Access token not provided.'], 401);
         }
-             $key = 'TestKey';
+             $key = '0ga7v0ipnufgfpC';
         if ($key != $accessToken) {
             return response()->json(['error' => 'Invalid access token.'], 401);
         }             

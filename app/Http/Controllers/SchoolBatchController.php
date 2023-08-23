@@ -109,7 +109,7 @@ class SchoolBatchController extends Controller {
                         $schoolname = School::where('ID', $request->input('SchoolId'))->select('name')->first();
                         foreach ($ccRecipients as $recipent) {
                          
-                                $staffmember = User::where('id', $recipent->UserID)->first();
+                                $staffmember = User::where('id', $recipent)->first();
                                 $data = [
                                     'name' => $staffmember->first_name . '' . $staffmember->last_name,
                                     'batchname' => $schoolBatch->BatchName,
@@ -158,9 +158,8 @@ class SchoolBatchController extends Controller {
           $ccRecipients = NotificationEventsLog::where('EventID',4)->pluck('UserID')->all();
             if (isset($ccRecipients)) {
                 $schoolname = School::where('ID', $request->input('SchoolId'))->select('name')->first();
-                foreach ($ccRecipients as $recipent) {
-                  
-                        $staffmember = User::where('id', $recipent->UserID)->first();
+                foreach ($ccRecipients as $recipent) {                 
+                        $staffmember = User::where('id',$recipent)->first();
                         $data = [
                             'name' => $staffmember->first_name . '' . $staffmember->last_name,
                             'batchname' => $schoolBatch->BatchName,
@@ -186,36 +185,45 @@ class SchoolBatchController extends Controller {
         }
     }
 
+
 function getAllSchoolBatch($sid, $skey, $sortkey, $sflag, $page, $limit)
-    {
-        $sortField = '';
-        if ($sortkey == 1) {
-            $sortField = 'BatchName';
+{
+    if ($page == 'null' && $limit == 'null') {
+        $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->orderBy('ID', $sflag)->get();
+        return response()->json([
+            'response' => 'success',
+            'msg' => $get
+        ]);
+    }
+
+    // Step 1: First, paginate without any sorting.
+    if ($skey == 'null') {
+        $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->paginate($limit, ['*'], 'page', $page);
+    } else {
+        $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->paginate($limit, ['*'], 'page', $page);
+    }
+
+    // Step 2: Sort the retrieved results using PHP.
+    if ($sortkey == 1) {
+        if ($sflag === 'asc') {
+            $get = $get->sortBy('BatchName');
         } else {
-            $sortField = 'ID';
+            $get = $get->sortByDesc('BatchName');
         }
-        if ($skey == 'null') {
-            if ($sortkey == 'null') {
-                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->paginate($limit, ['*'], 'page', $page);
-            } else {
-                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->orderBy($sortField, $sflag)->paginate($limit, ['*'], 'page', $page);
-            }
-            return response()->json([
-                'response' => 'success',
-                'msg' => $get
-            ]);
+    } else {
+        if ($sflag === 'asc') {
+            $get = $get->sortBy('ID');
         } else {
-            if ($sortkey == 'null') {
-                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->paginate($limit, ['*'], 'page', $page);
-            } else {
-                $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->orderBy($sortField, $sflag)->paginate($limit, ['*'], 'page', $page);
-            }
-            return response()->json([
-                'response' => 'success',
-                'msg' => $get
-            ]);
+            $get = $get->sortByDesc('ID');
         }
     }
+
+    return response()->json([
+        'response' => 'success',
+        'msg' => $get
+    ]);
+}
+
 
     function getSchoolBatchData($bid) {
         $get = SchoolBatchLog::with('ticket')->where('BatchID', $bid)->get()->groupBy('BatchID')->map(function ($items) {
