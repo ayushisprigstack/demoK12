@@ -46,6 +46,7 @@ use App\Models\SchoolAddress;
 use App\Models\InsurancePlan;
 use App\Models\ProductsForInsurancePlan;
 use App\Models\InsurancePlanEnrollment;
+use App\Models\InsurancePlanEnrollmentLog;
 use App\Models\CoverdServiceLog;
 use App\Models\CoverdDeviceModelLog;
 use App\Models\SchoolParentalCoverageCcSetting;
@@ -62,9 +63,11 @@ use Stripe\Exception\CardException;
 use App\Models\NotificationEvents;
 use App\Models\NotificationEventsLog;
 use App\Models\ContactUs;
+use App\Http\Controllers\StripController;
+
 class AdminInsurancePlanController extends Controller {
 
-   function AddUpdateInsurancePlan(Request $request) {
+    function AddUpdateInsurancePlan(Request $request) {
         $schoolID = $request->input('SchoolId');
         $schoolName = $request->input('SchoolName');
         $contactName = $request->input('ContactName');
@@ -77,7 +80,7 @@ class AdminInsurancePlanController extends Controller {
         $planID = $request->input('PlanID');
         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
         CoverdServiceLog::where('PlanID', $planID)->forceDelete();
-        CoverdDeviceModelLog::where('PlanID',$planID)->forceDelete();
+        CoverdDeviceModelLog::where('PlanID', $planID)->forceDelete();
         if ($planID == 0) {
             $insurancePlan = new InsurancePlan;
 
@@ -133,13 +136,14 @@ class AdminInsurancePlanController extends Controller {
         }
         return 'success';
     }
+
     function getAllOtherProducts() {
         $get = ProductsForInsurancePlan::all();
         return $get;
     }
 
     function getAllPlans($sid, $skey, $pflag) {
-         $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school');
+        $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school');
 
         if ($sid != 'null') {
             $planQuery->where('SchoolID', $sid);
@@ -173,26 +177,24 @@ class AdminInsurancePlanController extends Controller {
         }
         $plan = $planQuery->orderByDesc('ID')->get();
         $today = Carbon::today();
-        foreach ($plan as $data) {            
-            if (Carbon::parse($data->EndDate)->lt($today))
-            {
-                   $data->Url = null;  
-            }            
+        foreach ($plan as $data) {
+            if (Carbon::parse($data->EndDate)->lt($today)) {
+                $data->Url = null;
+            }
             if ($data->Status == 'New_Added') {
                 $data->color_code = '#FDFAE4';
             } elseif ($data->Status == 'Admin_Approve') {
                 $data->color_code = '#EFF4FF';
             } elseif ($data->Status == 'Live') {
                 $data->color_code = '#E7FEF6';
-            } elseif($data->Status == 'Past') {
+            } elseif ($data->Status == 'Past') {
                 $data->color_code = '#FFD3DD';
-            }elseif($data->Status == 'Rejected') {
+            } elseif ($data->Status == 'Rejected') {
                 $data->color_code = '#F9BDB5';
             }
         }
         return $plan;
     }
-
 
     function getPlanById($pid) {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $pid)->first();
@@ -231,8 +233,7 @@ class AdminInsurancePlanController extends Controller {
         return response()->json($plan);
     }
 
-    function createAndStoreInsurancePlanPdf($planid)
- {                                              
+    function createAndStoreInsurancePlanPdf($planid) {
         $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $planid)->first();
         $filename = 'InsurancePlan/' . $planid . '_' . time() . '.pdf';
         $pdf = PDF::loadView('insurancePlanPdf', ['data' => $data]);
@@ -259,7 +260,7 @@ class AdminInsurancePlanController extends Controller {
             InsurancePlan::where('ID', $planID)->update(['Price' => $totalPrice, 'Status' => 'Admin_Approve']);
         }
 
-        $ccRecipients = NotificationEventsLog::where('EventID',9)->pluck('UserID')->all();
+        $ccRecipients = NotificationEventsLog::where('EventID', 9)->pluck('UserID')->all();
         foreach ($ccRecipients as $recipent) {
             $staffmember = User::where('id', $recipent)->first();
             $plan = InsurancePlan::where('ID', $request->input('PlanId'))->first();
@@ -276,9 +277,9 @@ class AdminInsurancePlanController extends Controller {
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
-        }     
-       $tdata = $this->createAndStoreInsurancePlanPdf($planID);
-       
+        }
+        $tdata = $this->createAndStoreInsurancePlanPdf($planID);
+
         return 'success';
     }
 
@@ -296,13 +297,13 @@ class AdminInsurancePlanController extends Controller {
         $carbonEndDate = Carbon::create($endYear, 6, 30);
         $endDate = $carbonEndDate->format('Y-m-d');
         if ($flag == 1) {
-            InsurancePlan::where('ID', $planId)->update(['Status' => 'Live','Url' => $url,'StartDate'=>$startDate,'EndDate'=>$endDate]);
+            InsurancePlan::where('ID', $planId)->update(['Status' => 'Live', 'Url' => $url, 'StartDate' => $startDate, 'EndDate' => $endDate]);
         } else {
             $negotiatedPrice = $request->input('NegotiatedPrice');
-            InsurancePlan::where('ID', $planId)->update(['Status' => 'Rejected', 'NegotiatedPrice' => $negotiatedPrice,'StartDate'=>$startDate,'EndDate'=>$endDate]);
+            InsurancePlan::where('ID', $planId)->update(['Status' => 'Rejected', 'NegotiatedPrice' => $negotiatedPrice, 'StartDate' => $startDate, 'EndDate' => $endDate]);
         }
 
-       $ccRecipients = NotificationEventsLog::where('EventID',8)->pluck('UserID')->all();
+        $ccRecipients = NotificationEventsLog::where('EventID', 8)->pluck('UserID')->all();
         $plan = InsurancePlan::where('ID', $planId)->first();
         $school = School::where('ID', $schoolId)->first();
 
@@ -342,12 +343,46 @@ class AdminInsurancePlanController extends Controller {
 
     function getPlanByPlanNum($planmum) {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('PlanNum', $planmum)->first();
-        $today = Carbon::today();     
-            if (Carbon::parse($plan->EndDate)->lt($today))
-            {
-                   $plan->Url = null;  
-            }
+        $today = Carbon::today();
+        if (Carbon::parse($plan->EndDate)->lt($today)) {
+            $plan->Url = null;
+        }
         return $plan;
+    }
+
+    function purchasePlan(Request $request) {
+        $studentNum = $request->input('StudentNo');
+        $email = $request->input('Email');
+        $paidAmount = $request->input('Total');
+        $schoolID = $request->input('SchoolID');
+        $grade = $request->input('Grade');
+        $planID = $request->input('PlanId');
+        $otherServiceArray = $request->input('OtherProducts');
+        $stripController = new StripController();
+        $paymentDataResponse = $stripController->teststrip($request);
+        $paymentData = $paymentDataResponse->original;        
+        if ($paymentData['msg'] == 'error') {
+            return response()->json(['msg' => 'stripe payment have some issue', 'status' => 'error']);
+        } else {
+            $enrollment = new InsurancePlanEnrollment;
+            $enrollment->SchoolID = $schoolID;
+            $enrollment->PlanID = $schoolID;
+            $enrollment->StudentID = $studentNum;
+            $enrollment->PaidAmount = $paidAmount;
+            $enrollment->StripCustomerID = $paymentData['customer_id'];
+            $enrollment->save();
+
+            foreach ($otherServiceArray as $otherService) {
+                $enrollmentLog = new InsurancePlanEnrollmentLog;
+                $enrollmentLog->StudentID = $studentNum;
+                $enrollmentLog->ServiceID = $otherService['id'];
+                $enrollmentLog->PlanID = $planID;
+                $enrollmentLog->save();
+                
+                Student::where('Student_num',$studentNum)->where('School_ID',$schoolID)->update(['stripeCustomerID'=>$paymentData['customer_id']]);
+            }
+            return response()->json(['msg' => 'payment successful', 'status' => 'success']);
+        }
     }
 
     function allPlansForAdmin($sid, $skey, $pflag) {
@@ -395,6 +430,7 @@ class AdminInsurancePlanController extends Controller {
         }
         return $plan;
     }
+
     function contactUs(Request $request) {
         $studentNum = $request->input('StudentNumber');
         $question = $request->input('Question');
@@ -413,24 +449,24 @@ class AdminInsurancePlanController extends Controller {
             $contactUs->FeedBack = $feedBack;
             $contactUs->PlanNum = $planNum;
             $contactUs->save();
-            
-          $user = User::where('school_id',$schoolId)->where('access_type',1)->orderBy('created_at', 'asc')->first();  
-          $planQuery = InsurancePlan::with('school')->where('PlanNum',$planNum)->first();
-         
-        $data = [
-            'school_name' => $planQuery->school->name,
-            'plannum' => $planQuery->PlanNum,
-            'planname' => $planQuery->PlanName,
-            'plancreateddate' => $planQuery->created_at->format('m-d-y'),
-            'name'=>$user->first_name.' '.$user->last_name
-        ];
-           
+
+            $user = User::where('school_id', $schoolId)->where('access_type', 1)->orderBy('created_at', 'asc')->first();
+            $planQuery = InsurancePlan::with('school')->where('PlanNum', $planNum)->first();
+
+            $data = [
+                'school_name' => $planQuery->school->name,
+                'plannum' => $planQuery->PlanNum,
+                'planname' => $planQuery->PlanName,
+                'plancreateddate' => $planQuery->created_at->format('m-d-y'),
+                'name' => $user->first_name . ' ' . $user->last_name
+            ];
+
             try {
                 Mail::to($user->email)->send(new ContactUsMailer($data));
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
-            
+
             return response()->json([
                         'status' => 'success'
             ]);

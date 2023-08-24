@@ -48,20 +48,23 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 //Route::middleware(['uniquekey'])->group(function () {
-  Route::get('/allMembers/{sid}&{uid}',[SettingController::class,'allMembers']);
-  Route::post('/addUsers',[LoginController::class,'addUsers']);
-  Route::post('/register',[LoginController::class,'register']);
-  Route::get('/schoolDatabyNumber/{num}',[SchoolController::class,'schoolDatabyNumber']);
-  Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}&{page}&{limit}', [BuildingController::class, 'allBuildings']);
-  Route::post('addSupportTicketFromLink',[SupportTicketController::class,'addSupportTicketFromLink']);
-  Route::get('/getTechnologyAndMaintenanceData/{flag}', [SupportTicketController::class, 'getTechnologyAndMaintenanceData']);
-  Route::get('/getAllCommentsById/{id}',[SupportTicketController::class,'getAllCommentsById']);
-  Route::post('/addCommentsonSupportTicket',[SupportTicketController::class,'addCommentsonSupportTicket']);
-  Route::get('/setK12LoginasSchoolLogin/{email}&{sid}&{flag}',[AddTechnicianController::class,'setK12LoginasSchoolLogin']);
-  Route::get('/getPlanByPlanNum/{plannum}', [AdminInsurancePlanController::class, 'getPlanByPlanNum']);
-  Route::post('/teststrip', [StripController::class, 'teststrip']);
-  Route::post('/sameDomainSchoolContinueClick', [LoginController::class, 'sameDomainSchoolContinueClick']);
-  Route::post('/sameDomainSchoolConfirmClick', [LoginController::class, 'sameDomainSchoolConfirmClick']);
+Route::get('/allMembers/{sid}&{uid}', [SettingController::class, 'allMembers']);
+Route::post('/addUsers', [LoginController::class, 'addUsers']);
+Route::post('/register', [LoginController::class, 'register']);
+Route::get('/schoolDatabyNumber/{num}', [SchoolController::class, 'schoolDatabyNumber']);
+Route::get('/allBuildings/{sid}&{skey}&{sortkey}&{sflag}&{page}&{limit}', [BuildingController::class, 'allBuildings']);
+Route::post('addSupportTicketFromLink', [SupportTicketController::class, 'addSupportTicketFromLink']);
+Route::get('/getTechnologyAndMaintenanceData/{flag}', [SupportTicketController::class, 'getTechnologyAndMaintenanceData']);
+Route::get('/getAllCommentsById/{id}', [SupportTicketController::class, 'getAllCommentsById']);
+Route::post('/addCommentsonSupportTicket', [SupportTicketController::class, 'addCommentsonSupportTicket']);
+Route::get('/setK12LoginasSchoolLogin/{email}&{sid}&{flag}', [AddTechnicianController::class, 'setK12LoginasSchoolLogin']);
+Route::get('/getPlanByPlanNum/{plannum}', [AdminInsurancePlanController::class, 'getPlanByPlanNum']);
+Route::post('/teststrip', [StripController::class, 'teststrip']);
+Route::post('/sameDomainSchoolContinueClick', [LoginController::class, 'sameDomainSchoolContinueClick']);
+Route::post('/sameDomainSchoolConfirmClick', [LoginController::class, 'sameDomainSchoolConfirmClick']);
+Route::post('/teststrip', [StripController::class, 'teststrip']);
+Route::get('/getstripedata/{custid}', [StripController::class, 'getstripedata']);
+Route::post('/purchasePlan', [AdminInsurancePlanController::class, 'purchasePlan']);
 //});
 
 //Route::middleware(['access.token'])->group(function () {

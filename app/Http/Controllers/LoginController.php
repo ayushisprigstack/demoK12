@@ -109,7 +109,7 @@ class LoginController extends Controller {
         $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
         $response = $request->input('Captcha');
         $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
-//        if ($resp->isSuccess()) {
+        if ($resp->isSuccess()) {
         //email domain is match with db domain
         foreach ($domainalldata as $data) {
             $dataEmailDomain = $data->Name;
@@ -239,7 +239,7 @@ class LoginController extends Controller {
                     'domain' => $requstedEmailDomain,
                 ];
 
-                $mainUser = 'team.sprigstack@gmail.com';
+                $mainUser = 'Info@k12techrepairs.com';
 
                 try {
                     Mail::to($mainUser)->send(new RegisterMailer($data, 'emails.newSchoolWithoutDomainAdd'));
@@ -270,13 +270,13 @@ class LoginController extends Controller {
                 ));
             }
         }
-//        } else {
-//            return Response::json(array(
-//                        'response' => 'Reject',
-//                        'msg' => 'Invalid Captcha!',
-//                        'status' => 'error'
-//            ));
-//    }
+        } else {
+            return Response::json(array(
+                        'response' => 'Reject',
+                        'msg' => 'Invalid Captcha!',
+                        'status' => 'error'
+            ));
+    }
     }
 
     function sameDomainSchoolContinueClick(Request $request) {
@@ -325,7 +325,8 @@ class LoginController extends Controller {
 
         return Response::json(array(
                     'link' => $url,
-                    'status' => 'success'
+                    'status' => 'success',
+                     'msg'=>'administrator contact you for further assistance'
         ));
     }
 

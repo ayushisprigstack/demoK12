@@ -73,44 +73,44 @@ class AdminDashboardController extends Controller {
         ));
     }
 
-    function adminDashboardData($startDate, $endDate, $lid,$sid) {
+    function adminDashboardData($startDate, $endDate, $lid, $sid) {
         set_time_limit(0);
         $startDate = Carbon::createFromFormat('m-d-Y', $startDate)->startOfDay();
         $endDate = Carbon::createFromFormat('m-d-Y', $endDate)->endOfDay();
         //////////technician    
         $technicians = K12User::where('access_type', 6)->get();
         $technician_array = array();
-        foreach ($technicians as $technician) {           
+        foreach ($technicians as $technician) {
             $userData = User::where('email', $technician->email)->first();
-            if(isset($userData)){
-                 $TechnicianLocation = TechnicianLocation::where('Technician', $userData->id)->get();
-            $techLoc_array_name = array();
-            $techLoc_array_id = array();
-            foreach ($TechnicianLocation as $tlData) {
-                $TechnicianLocationName = Location::where('ID', $tlData->Location)->first();
-                if(isset($TechnicianLocationName)){
-                $techLoc_array_name[] = $TechnicianLocationName->Location;
-                $techLoc_array_id[] = $TechnicianLocationName->ID;                
-                }else{
-                    $techLoc_array_name[] = null;
-                    $techLoc_array_id[] = null;  
-                }                
-            }
+            if (isset($userData)) {
+                $TechnicianLocation = TechnicianLocation::where('Technician', $userData->id)->get();
+                $techLoc_array_name = array();
+                $techLoc_array_id = array();
+                foreach ($TechnicianLocation as $tlData) {
+                    $TechnicianLocationName = Location::where('ID', $tlData->Location)->first();
+                    if (isset($TechnicianLocationName)) {
+                        $techLoc_array_name[] = $TechnicianLocationName->Location;
+                        $techLoc_array_id[] = $TechnicianLocationName->ID;
+                    } else {
+                        $techLoc_array_name[] = null;
+                        $techLoc_array_id[] = null;
+                    }
+                }
 
-         $repairedTickets = TicketStatusLog::where('who_worked_on', $userData->id)->whereBetween('created_at', [$startDate, $endDate])->get();          
-            $CountsofTicket = TicketStatusLog::where('who_worked_on', $userData->id)->count();
-               $point = 0;
-                foreach ($repairedTickets as $repairedTicket) {                
-                    $ticketRepairLogData = TicketRepairLog::where('Ticket_Id', $repairedTicket->Ticket_id)->first();                   
+                $repairedTickets = TicketStatusLog::where('who_worked_on', $userData->id)->whereBetween('created_at', [$startDate, $endDate])->get();
+                $CountsofTicket = TicketStatusLog::where('who_worked_on', $userData->id)->count();
+                $point = 0;
+                foreach ($repairedTickets as $repairedTicket) {
+                    $ticketRepairLogData = TicketRepairLog::where('Ticket_Id', $repairedTicket->Ticket_id)->first();
                     if ($ticketRepairLogData) {
                         $deviceTypeData = DeviceType::where('ID', $ticketRepairLogData->DeviceType)->first();
                         $point += $deviceTypeData->point ?? 0;
                     }
-                }            
+                }
                 array_push($technician_array, ['TechnicianName' => $userData->first_name . ' ' . $userData->last_name, 'TechID' => $userData->id, 'Points' => $point, 'TotalTickets' => $CountsofTicket, 'locationName' => implode(',', $techLoc_array_name), 'locationID' => implode(',', $techLoc_array_id)]);
             }
         }
-              
+
         /////////  school invoice 
 
         if ($lid == 'null' && $sid == 'null') {
@@ -127,9 +127,9 @@ class AdminDashboardController extends Controller {
         $school_array = array();
 
         foreach ($schools as $schData) {
-           $techcount = TicketStatusLog::where('School_id', $schData->ID)->whereNotNull('who_worked_on')->whereBetween('created_at', [$startDate, $endDate])->count();
+            $techcount = TicketStatusLog::where('School_id', $schData->ID)->whereNotNull('who_worked_on')->whereBetween('created_at', [$startDate, $endDate])->count();
             $invoice = InvoiceLog::where('School_Id', $schData->ID)->whereBetween('created_at', [$startDate, $endDate])->pluck('Batch_ID')->all();
-            $invoiceCount =InvoiceLog::where('School_Id', $schData->ID)->whereBetween('created_at', [$startDate, $endDate])->count();
+            $invoiceCount = InvoiceLog::where('School_Id', $schData->ID)->whereBetween('created_at', [$startDate, $endDate])->count();
             $totalamount = 0;
             foreach ($invoice as $invoicedata) {
                 $batchTicket = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->distinct()->pluck('Ticket_Id')->all();
@@ -140,85 +140,85 @@ class AdminDashboardController extends Controller {
             }
 
             if ($totalamount > 0) {
-                array_push($school_array, ['count' => $techcount,'id' => $schData->ID, 'name' => $schData->name, 'Invoice' => $totalamount,'InvoiceCount'=>$invoiceCount]);
+                array_push($school_array, ['count' => $techcount, 'id' => $schData->ID, 'name' => $schData->name, 'Invoice' => $totalamount, 'InvoiceCount' => $invoiceCount]);
             }
         }
 
 
         /////   incomming 
 
-       if ($lid == 'null' && $sid != 'null') {
-    $ticktdata = Ticket::with(['school', 'inventoryManagement.studentInventory'])
-        ->whereHas('school', function ($query) use ($sid) {
-            $query->where('id', $sid);
-        })
-        ->whereBetween('created_at', [$startDate, $endDate])
-        ->get();
-} elseif ($lid != 'null' && $sid == 'null') {
-    $ticktdata = Ticket::with(['school', 'inventoryManagement.studentInventory'])
-        ->whereHas('school', function ($query) use ($lid) {
-            $query->where('location', $lid);
-        })
-        ->whereBetween('created_at', [$startDate, $endDate])
-        ->get();
-} elseif ($lid != 'null' && $sid != 'null') {
-    $ticktdata = Ticket::with(['school', 'inventoryManagement.studentInventory'])
-        ->whereHas('school', function ($query) use ($lid, $sid) {
-            $query->where('location', $lid)->where('id', $sid);
-        })
-        ->whereBetween('created_at', [$startDate, $endDate])
-        ->get();
-} else {
-    $ticktdata = Ticket::with('inventoryManagement.studentInventory')
-        ->whereBetween('created_at', [$startDate, $endDate])
-        ->get();
-}
-
-$incomming_array = [];
-$outgoing_array = [];
-$inventoryCount = 0;
-
-foreach ($ticktdata as $ticket) {
-    $school = $ticket->school;
-    $ticket->makeHidden(['inventoryManagement', 'school', 'created_at', 'updated_at']);
-
-    if ($ticket->ticket_status == 3) {
-        if (!isset($incomming_array[$school->ID])) {
-            $incomming_array[$school->ID] = [
-                'schoolName' => $school->name,
-                'ticketCount' => 0,
-                'amount' => 0,
-                'inventoryCount' => 0, // New addition
-            ];
+        if ($lid == 'null' && $sid != 'null') {
+            $ticktdata = Ticket::with(['school', 'inventoryManagement.studentInventory'])
+                    ->whereHas('school', function ($query) use ($sid) {
+                        $query->where('id', $sid);
+                    })
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get();
+        } elseif ($lid != 'null' && $sid == 'null') {
+            $ticktdata = Ticket::with(['school', 'inventoryManagement.studentInventory'])
+                    ->whereHas('school', function ($query) use ($lid) {
+                        $query->where('location', $lid);
+                    })
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get();
+        } elseif ($lid != 'null' && $sid != 'null') {
+            $ticktdata = Ticket::with(['school', 'inventoryManagement.studentInventory'])
+                    ->whereHas('school', function ($query) use ($lid, $sid) {
+                        $query->where('location', $lid)->where('id', $sid);
+                    })
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get();
+        } else {
+            $ticktdata = Ticket::with('inventoryManagement.studentInventory')
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get();
         }
 
-        $incomming_array[$school->ID]['ticketCount']++;
-        $incomming_array[$school->ID]['amount'] += $ticket->ticketAttachments->sum(function ($attachment) {
-            return $attachment->Parts_Price * $attachment->Quantity;
-        });
-       
-        $inventories = collect(); // Collect unique inventory IDs
-     
-        $incomming_array[$school->ID]['inventoryCount'] += $inventories->unique('ID')->count(); // Count unique inventory IDs
-    } elseif ($ticket->ticket_status == 10 || $ticket->ticket_status == 9) {
-        if (!isset($outgoing_array[$school->ID])) {
-            $outgoing_array[$school->ID] = [
-                'schoolName' => $school->name,
-                'ticketCount' => 0,
-                'amount' => 0,
-                'inventoryCount' => 0, // New addition
-            ];
+        $incomming_array = [];
+        $outgoing_array = [];
+        $inventoryCount = 0;
+
+        foreach ($ticktdata as $ticket) {
+            $school = $ticket->school;
+            $ticket->makeHidden(['inventoryManagement', 'school', 'created_at', 'updated_at']);
+
+            if ($ticket->ticket_status == 3) {
+                if (!isset($incomming_array[$school->ID])) {
+                    $incomming_array[$school->ID] = [
+                        'schoolName' => $school->name,
+                        'ticketCount' => 0,
+                        'amount' => 0,
+                        'inventoryCount' => 0, // New addition
+                    ];
+                }
+
+                $incomming_array[$school->ID]['ticketCount']++;
+                $incomming_array[$school->ID]['amount'] += $ticket->ticketAttachments->sum(function ($attachment) {
+                    return $attachment->Parts_Price * $attachment->Quantity;
+                });
+
+                $inventories = collect(); // Collect unique inventory IDs
+
+                $incomming_array[$school->ID]['inventoryCount'] += $inventories->unique('ID')->count(); // Count unique inventory IDs
+            } elseif ($ticket->ticket_status == 10 || $ticket->ticket_status == 9) {
+                if (!isset($outgoing_array[$school->ID])) {
+                    $outgoing_array[$school->ID] = [
+                        'schoolName' => $school->name,
+                        'ticketCount' => 0,
+                        'amount' => 0,
+                        'inventoryCount' => 0, // New addition
+                    ];
+                }
+
+                $outgoing_array[$school->ID]['ticketCount']++;
+                $outgoing_array[$school->ID]['amount'] += $ticket->ticketAttachments->sum(function ($attachment) {
+                    return $attachment->Parts_Price * $attachment->Quantity;
+                });
+
+                $inventories = collect(); // Collect unique inventory IDs   
+                $outgoing_array[$school->ID]['inventoryCount'] += $inventories->unique('ID')->count(); // Count unique inventory IDs
+            }
         }
-
-        $outgoing_array[$school->ID]['ticketCount']++;
-        $outgoing_array[$school->ID]['amount'] += $ticket->ticketAttachments->sum(function ($attachment) {
-            return $attachment->Parts_Price * $attachment->Quantity;
-        });
-
-        $inventories = collect(); // Collect unique inventory IDs   
-        $outgoing_array[$school->ID]['inventoryCount'] += $inventories->unique('ID')->count(); // Count unique inventory IDs
-    }
-}
         $incomming_array = array_values($incomming_array);
         $outgoing_array = array_values($outgoing_array);
 

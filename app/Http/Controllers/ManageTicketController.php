@@ -481,11 +481,23 @@ class ManageTicketController extends Controller {
         $damageType = $request->input('DamageType');
         $flag = $request->input('Flag');
         $deviceType =  $request->input('DeviceType');
-        
-        if($RepairFinished == 1){
-            Ticket::where('school_id',$schoolId)->where('ID',$ticketId)->update(['ticket_status'=>9]);
-          //for incomming batch         
-            $schoolBatchLog = SchoolBatchLog::where('TicketID',$ticketId)->first();
+        $loginUserId = $request->input('LoginUserID');
+        if ($RepairFinished == 1) {
+            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();
+            $statusFrom = $ticketData->ticket_status;
+            $statusTo = 9;
+            $ticketlog = new TicketStatusLog();
+            $ticketlog->Ticket_id = $ticketId;           
+            $ticketlog->Status_from = $statusFrom;
+            $ticketlog->Status_to = $statusTo;
+            $ticketlog->updated_by_user_id = $loginUserId;          
+            $ticketlog->who_worked_on = $loginUserId;
+            $ticketlog->School_id = $schoolId;
+            $ticketlog->save();
+            Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->update(['ticket_status' => 9]);
+            
+            //for incomming batch         
+            $schoolBatchLog = SchoolBatchLog::where('TicketID', $ticketId)->first();
             if ($schoolBatchLog != null) {
                 SchoolBatch::where('ID', $schoolBatchLog->BatchID)->update(['Status' => 2]);
 
@@ -493,16 +505,16 @@ class ManageTicketController extends Controller {
                 $allCompleted = true; // Flag to track if all ticket statuses are completed
 
                 foreach ($schoolBatchLogData as $data) {
-                   $ticket = Ticket::where('ID',$data->TicketID)->first();
-                        if ($ticket->ticket_status != 9 && $ticket->ticket_status != 10){
+                    $ticket = Ticket::where('ID', $data->TicketID)->first();
+                    if ($ticket->ticket_status != 9 && $ticket->ticket_status != 10) {
                         $allCompleted = false;
                         break;
-        }
+                    }
                 }
                 if ($allCompleted) {
                     SchoolBatch::where('ID', $schoolBatchLog->BatchID)->update(['Status' => 3]);
                 }
-            }        
+            }
         }
         //Parts notes change      
         foreach ($partsNotes as $note) {
