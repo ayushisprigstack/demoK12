@@ -47,7 +47,8 @@ use App\Models\SupportTicketComments;
 use App\Models\SupportTicketAssignment;
 use App\Models\SchoolBatch;
 use App\Models\SchoolBatchLog;
-
+use App\Models\K12User;
+use App\Models\Location;
 class SchoolController extends Controller {
 
     public function GetallSchools($skey, $uid) {
@@ -143,9 +144,63 @@ class SchoolController extends Controller {
             // Delete records from User table
             User::where('school_id', $sid)->forceDelete();
             School::where('ID', $sid)->forceDelete();
+            
         });
 
         return 'Success';
+    }
+    
+function getOverAllData()
+    {
+        $getSchools = School::count();
+        $totalActiveSchools = School::where('status', 'Active')->count();
+        $totalTechnicians = K12User::where('access_type', 6)->where('status', 'Approve')->count();
+        $totalincomingdevices = Ticket::where('ticket_status', 3)->count();
+        $totaloutgoingdevices = Ticket::where('ticket_status', 9)->orWhere('ticket_status', 10)->count();
+        $totaldomains = Domain::count();
+        $totalactivedomains = Domain::where('Status', 'active')->count();
+        $totallocations = Location::count();
+        $totalactivelocations = Location::where('Status', 'Active')->count();
+        $totalactivemasterinventory = PartSKUs::where('Master_ID', null)->Where('School_ID', null)->where('Status', 'active')->count();
+        $totalUsers = User::count();
+        $highestTicket = DB::table('tickets')
+            ->select('schools.name as name', 'tickets.school_id', DB::raw('count(*) as ticket_count'))
+            ->join('schools', 'tickets.school_id', '=', 'schools.id')
+            ->groupBy('tickets.school_id', 'schools.name')
+            ->orderBy('ticket_count', 'desc')
+            ->limit(1)
+            ->first();
+
+        $highestDevice = DB::table('inventory_management')
+            ->join('schools', 'inventory_management.school_id', '=', 'schools.id')
+            ->select('schools.name', 'inventory_management.school_id', DB::raw('count(*) as device_count'))
+            ->groupBy('schools.name', 'inventory_management.school_id')
+            ->orderBy('device_count', 'desc')
+            ->limit(1)
+            ->first();
+
+        $totaltechnologysupporttickets = SupportTicket::where('Type', 1)->count();
+        $totalmaintencesupporttickets = SupportTicket::where('Type', 2)->count();
+        $totalsoftwares = ManageSoftware::count();
+
+        return response()->json([
+            'totalschools' => $getSchools,
+            'totalactiveschools' => $totalActiveSchools,
+            'totalactivetechnicians' => $totalTechnicians,
+            'totalincomingdevices' => $totalincomingdevices,
+            'totaloutgoingdevices' => $totaloutgoingdevices,
+            'totaldomains' => $totaldomains,
+            'totalactivedomains' => $totalactivedomains,
+            'totallocations' => $totallocations,
+            'totalactivelocations' => $totalactivelocations,
+            'totalactivemasterinventory' => $totalactivemasterinventory,
+            'highestTicket' => $highestTicket,
+            'highestDevice' => $highestDevice,
+            'totalStaffmembers' => $totalUsers,
+            'technologysupportticket' => $totaltechnologysupporttickets,
+            'totalmaintencesupporttickets' => $totalmaintencesupporttickets,
+            'totalsoftwares' => $totalsoftwares,
+        ]);
     }
 
 }

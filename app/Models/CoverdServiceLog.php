@@ -9,24 +9,20 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Model;
 
-class School extends Model {
+class CoverdServiceLog extends Model {
 
     use HasApiTokens,
         HasFactory,
         Notifiable;
 
-    protected $table = "schools";
+    protected $table = "coverd_services_log";
 
-    public function location() {
-        return $this->belongsTo(Location::class, 'location');
+    public function services() {
+        return $this->hasMany(ProductsForInsurancePlan::class, 'ID', 'ServiceID');
     }
 
-    public function tickets() {
-        return $this->hasMany(Ticket::class, 'school_id');
+    public function plan() {
+        return $this->belongsTo(InsurancePlan::class, 'PlanID', 'ID');
     }
-    
-     public function logo() {
-    return $this->hasOne(Logo::class, 'School_ID', 'ID');
-}
 
 }

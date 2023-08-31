@@ -42,6 +42,8 @@ use App\Models\SchoolBatchLog;
 use App\Models\SchoolBatch;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class ManageTicketController extends Controller {
 
     function allTickets($sid, $uid) {
@@ -403,7 +405,7 @@ class ManageTicketController extends Controller {
                 $file = $img['Img'];
                 $name = $count . 'img_' . time();
                 $filePath = 'Tickets/' . $request->input('TicketId') . '/' . $name;
-                Storage::disk('public')->put($filePath, file_get_contents($file));
+                Storage::disk('s3')->put($filePath, file_get_contents($file));
 
                 $TicketImg = new TicketImage();
                 $TicketImg->Ticket_ID = $request->input('TicketId');
@@ -481,11 +483,23 @@ class ManageTicketController extends Controller {
         $damageType = $request->input('DamageType');
         $flag = $request->input('Flag');
         $deviceType =  $request->input('DeviceType');
-        
-        if($RepairFinished == 1){
-            Ticket::where('school_id',$schoolId)->where('ID',$ticketId)->update(['ticket_status'=>9]);
-          //for incomming batch         
-            $schoolBatchLog = SchoolBatchLog::where('TicketID',$ticketId)->first();
+        $loginUserId = $request->input('LoginUserID');
+        if ($RepairFinished == 1) {
+            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();
+            $statusFrom = $ticketData->ticket_status;
+            $statusTo = 9;
+            $ticketlog = new TicketStatusLog();
+            $ticketlog->Ticket_id = $ticketId;           
+            $ticketlog->Status_from = $statusFrom;
+            $ticketlog->Status_to = $statusTo;
+            $ticketlog->updated_by_user_id = $loginUserId;          
+            $ticketlog->who_worked_on = $loginUserId;
+            $ticketlog->School_id = $schoolId;
+            $ticketlog->save();
+            Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->update(['ticket_status' => 9]);
+            
+            //for incomming batch         
+            $schoolBatchLog = SchoolBatchLog::where('TicketID', $ticketId)->first();
             if ($schoolBatchLog != null) {
                 SchoolBatch::where('ID', $schoolBatchLog->BatchID)->update(['Status' => 2]);
 
@@ -493,16 +507,16 @@ class ManageTicketController extends Controller {
                 $allCompleted = true; // Flag to track if all ticket statuses are completed
 
                 foreach ($schoolBatchLogData as $data) {
-                   $ticket = Ticket::where('ID',$data->TicketID)->first();
-                        if ($ticket->ticket_status != 9 && $ticket->ticket_status != 10){
+                    $ticket = Ticket::where('ID', $data->TicketID)->first();
+                    if ($ticket->ticket_status != 9 && $ticket->ticket_status != 10) {
                         $allCompleted = false;
                         break;
-        }
+                    }
                 }
                 if ($allCompleted) {
                     SchoolBatch::where('ID', $schoolBatchLog->BatchID)->update(['Status' => 3]);
                 }
-            }        
+            }
         }
         //Parts notes change      
         foreach ($partsNotes as $note) {
@@ -549,20 +563,20 @@ class ManageTicketController extends Controller {
                 PartSKUs::where('ID', $data['PartID'])->update(['Quantity' => $quantity]);
                 //mail send 
                 $schoolname = School::where('ID', $schoolId)->select('name')->first();
-                $ccRecipients = InventoryCcSetting::where('School_ID', $schoolId)->pluck('UserID')->all();                
+                $ccRecipients = NotificationEventsLog::where('EventID',2)->pluck('UserID')->all();              
                 $data = [
                     'partname' => $partssku->Title,
                     'remaining_quantity' => $partssku->Quantity - 1,
                     'school_name' => $schoolname->name
                 ];
                  foreach ($ccRecipients as $recipent) {
-                        $staffmember = User::where('id', $recipent)->first();
-                        try {
+                    $staffmember = User::where('id', $recipent)->first();                  
+                    try {
                         Mail::to($staffmember->email)->send(new ReorderPartsMailer($data));
                     } catch (\Exception $e) {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }
-                    }            
+                }
             }
         }
         //end   
@@ -591,7 +605,7 @@ class ManageTicketController extends Controller {
         return "success";
     }
 
-     function Tickets($sid,$gridflag,$key,$flag,$skey,$sflag,$tflag) {       
+     function Tickets($sid,$gridflag,$key,$flag,$skey,$sflag,$tflag) {
 //       $sid = school id   ,$gridflag = open,close,all,pending $key = search key ,$flag = open mathi k close mathi ,$sflag = as k desc ,$skey = sortby key, tflag = schoolside k admin side 
         $data = Ticket::with('inventoryManagement.studentInventory', 'ticketIssues.deviceIssue','ticketAttachments')
                 ->where('school_id', $sid)

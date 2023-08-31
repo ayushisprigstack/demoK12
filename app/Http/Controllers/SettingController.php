@@ -26,11 +26,16 @@ use App\Models\SignUpCcSetting;
 use App\Models\LoginAsSchoolAdminLog;
 use App\Models\SchoolAddress;
 use App\Models\Location;
+use App\Models\AdminCorporateStaffCcSetting;
+use App\Models\SchoolParentalCoverageCcSetting;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
+use App\Models\Student;
 class SettingController extends Controller
 {
+   
 
-    function allMembers($sid,$uid)
-    {
+    function allMembers($sid, $uid) {
         $getUser = User::where('id', $uid)->first();
         $logodata = Logo::where('School_ID', $sid)->first();
         if (isset($logodata)) {
@@ -38,24 +43,23 @@ class SettingController extends Controller
         } else {
             $logo = null;
         }
-        $backtoAdmin = LoginAsSchoolAdminLog::where('LoginSchoolID',$sid)->first();
-       
-        if(isset($backtoAdmin)){          
-           $data =  User::where('id', $backtoAdmin->K12ID)->first();
-        }else{
+        $backtoAdmin = LoginAsSchoolAdminLog::where('LoginSchoolID', $sid)->first();
+
+        if (isset($backtoAdmin)) {
+            $data = User::where('id', $backtoAdmin->K12ID)->first();
+        } else {
             $data = NULL;
         }
-                
-                return response()->json([
+
+        return response()->json([
                     'status' => "success",
                     'logo' => $logo,
                     'user' => $getUser,
-                    'BackToadminData'=>$data
+                    'BackToadminData' => $data
         ]);
     }
 
-    function additionalSetting(Request $request)
- {
+    function additionalSetting(Request $request) {
         $uploadLogo = $request->input('UploadLogo');
         $schoolId = $request->input('SchoolId');
         $streetLines = $request->input('StreetLines');
@@ -66,18 +70,29 @@ class SettingController extends Controller
         $phoneNum = $request->input('PhoneNum');
         $addupdateId = $request->input('AddUpdateId');
         $schoolName = $request->input('SchoolName');
-        $school = School::where('ID',$schoolId)->first();       
-        if($addupdateId == 0){
+        $school = School::where('ID', $schoolId)->first();
+
+        $check = Logo::where('School_ID', $schoolId)->first();       
+        if (isset($check)) {
+            Logo::where('School_ID', $schoolId)->update(['Logo_Path' => $uploadLogo]);
+        } else {
+            $logo = new Logo;
+            $logo->School_ID = $schoolId;
+            $logo->Logo_Path = $uploadLogo;
+            $logo->save();
+        }
+
+        if ($addupdateId == 0) {
             $address = new SchoolAddress;
             $address->StreetLine = $streetLines;
             $address->City = $city;
             $address->StateOrProvinceCode = $state;
             $address->PostalCode = $postalCode;
-            $address->CountryCode = $countryCode;            
+            $address->CountryCode = $countryCode;
             $address->SchoolID = $schoolId;
             $address->PhoneNum = $phoneNum;
             $address->Location = $school->location;
-            $address->save();                     
+            $address->save();
         } else {
             SchoolAddress::where('SchoolID', $schoolId)->update(['StreetLine' => $streetLines, 'City' => $city, 'StateOrProvinceCode' => $state, 'PostalCode' => $postalCode, 'PhoneNum' => $phoneNum]);
             $checkschool = School::whereNot('ID', $schoolId)->where('name', $schoolName)->first();
@@ -89,268 +104,78 @@ class SettingController extends Controller
                 School::where('ID', $schoolId)->update(['name' => $schoolName]);
                 return Response::json(array('status' => "success"));
             }
-        }
-
-        $logoisset = Logo::where('School_ID', $schoolId)->where('Logo_Path', $request->input('UploadLogo'))->first();
-        if (!isset($logoisset)) {
-            $check = Logo::where('School_ID', $schoolId)->first();
-            if (isset($check)) {
-                Logo::where('School_ID', $schoolId)->update(['Logo_Path' => $uploadLogo]);
-            } else {
-                $logo = new Logo;
-                $logo->School_ID = $schoolId;
-                $logo->Logo_Path = $uploadLogo;
-                $logo->save();
-            }
-        }
-        return Response::json(array('status' => "success"));
+        }     
     }
 
-    function GetAllNotifications($sid, $flag)
-    {
-        $copyTicketArray = array();
-        $sendInventoryArray = array();
-        $incomingBatchesArray = array();
-        $outgoingBatchesArray = array();
-        $InvoicesArray = array();
-        $notificationArray = array();
-        $SignupUsersArray = array();
-
-        $getTicket = TicketCcSetting::where('School_ID', $sid)->get();
-        foreach ($getTicket as $ticketData) {
-            $ticketuser = User::where('id', $ticketData->UserID)->first();
-            array_push($copyTicketArray, ['emailid' => $ticketuser->id, 'email' => $ticketuser->email]);
+    function GetAllNotifications($sid,$flag) {
+//           $flag=1 for admin side
+        $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID',$sid)->where('EventType',$flag)->get();
+        $getEvents = NotificationEvents::where('Type',$flag)->get();
+            foreach ($getEventsData as $data) {
+            $data->eventName = $data->event->Events;
+            $data->schoolName = $data->school->name ?? null;
+            $data->userName = $data->user->first_name . ' ' . $data->user->last_name;
+            $data->userEmail = $data->user->email;
+            $data->makeHidden(['event', 'school', 'user', 'created_at', 'updated_at']);
         }
 
-        $getInventory = InventoryCcSetting::where('School_ID', $sid)->get();
-        foreach ($getInventory as $inventoryData) {
-            $inventoryuser = User::where('id', $inventoryData->UserID)->first();
-            array_push($sendInventoryArray, ['emailid' => $inventoryuser->id, 'email' => $inventoryuser->email]);
-        }
+        $grouped = $getEventsData->groupBy('EventID');
 
-        if ($sid == 0) {
-            $getMails = IncomingOutgoingBatchNotification::where('School_ID', $sid)
-                ->orWhereNull('School_ID')
-                ->get();
-        } else {
-            $getMails = IncomingOutgoingBatchNotification::where('School_ID', $sid)->get();
-        }
-        foreach ($getMails as $mail) {
-            $batchuser = User::where('id', $mail->UserID)->first();
+        $transformed = $grouped->map(function ($events, $eventId) {
+                    return [
+                'Id' => $eventId,
+                'Name' => $events->first()->eventName, // Assuming all events with the same ID have the same name
+                'details' => $events
+                    ];
+                })->values();
 
-            if ($mail->BatchType == 2) {
-                array_push($outgoingBatchesArray, ['emailid' => $batchuser->id, 'email' => $batchuser->email]);
-            } else {
-                array_push($incomingBatchesArray, ['emailid' => $batchuser->id, 'email' => $batchuser->email]);
-            }
-        }
-
-        $getInvoice = InvoiceCcSetting::where('School_ID', $sid)->get();
-        foreach ($getInvoice as $invoicedata) {
-            $invoiceuser = User::where('id', $invoicedata->UserID)->first();
-            array_push($InvoicesArray, ['emailid' => $invoiceuser->id, 'email' => $invoiceuser->email]);
-        }
-
-        if ($sid == 0) {
-            $getSignup = SignUpCcSetting::where('School_ID', $sid)
-                ->orWhereNull('School_ID')
-                ->get();
-        } else {
-            $getSignup = SignUpCcSetting::where('School_ID', $sid)->get();
-        }
-        foreach ($getSignup as $signupdata) {
-            $signupuser = User::where('id', $signupdata->UserID)->first();
-            array_push($SignupUsersArray, ['emailid' => $signupuser->id, 'email' => $signupuser->email]);
-        }
-
-        if ($flag == 1) {
-            $notificationArray[] = [
-                'Id' => 1,
-                'Name' => 'Copy Ticket Notification Emails',
-                'emails' => $copyTicketArray
-            ];
-
-            $notificationArray[] = [
-                'Id' => 2,
-                'Name' => 'Send Inventory Restock Notification Emails',
-                'emails' => $sendInventoryArray
-            ];
-            $notificationArray[] = [
-                'Id' => 4,
-                'Name' => 'Outgoing Batches Notification Emails',
-                'emails' => $outgoingBatchesArray
-            ];
-
-            $notificationArray[] = [
-                'Id' => 5,
-                'Name' => 'Invoice Notification Emails',
-                'emails' => $InvoicesArray
-            ];
-        } else {
-            $notificationArray[] = [
-                'Id' => 3,
-                'Name' => 'Incoming Batches Notification Emails',
-                'emails' => $incomingBatchesArray
-            ];
-            $notificationArray[] = [
-                'Id' => 6,
-                'Name' => 'Signup Users Notification Emails',
-                'emails' => $SignupUsersArray
-            ];
-        }
-
-        return Response::json(['msg' => $notificationArray]);
+        return response()->json(['msg' => $transformed,'events'=>$getEvents]);
+        
+        
+    }
+    
+    function GetEmailsbyId($sid, $id, $skey) {
+        $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventID', $id)->pluck('UserID');
+        $alluser = User::whereNotIn('id', $getEventsData)->where('school_id', $sid)->get();
+        $selecteduser = User::whereIn('id', $getEventsData)->where('school_id', $sid)->get();
+        return Response::json(['alluser' => $alluser,
+                    'selected' => $selecteduser]) ?? null;
     }
 
-    function GetEmailsbyId($sid, $id, $skey)
-    {
-        $query = User::where('school_id', $sid);
-        if ($id == 1) {
-            $getTicketIDs = TicketCcSetting::where('School_ID', $sid)->pluck('UserID');
-            if ($skey == 'null') {
-                $UserData = $query->whereNotIn('id', $getTicketIDs)->get(['id', 'email']);
-            } else {
-                $UserData = $query->whereNotIn('id', $getTicketIDs)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
-            }
-        } else if ($id == 2) {
-            $getinventoryIDs = InventoryCcSetting::where('School_ID', $sid)->pluck('UserID');
-            if ($skey == 'null') {
-                $UserData = $query->whereNotIn('id', $getinventoryIDs)->get(['id', 'email']);
-            } else {
-                $UserData = $query->whereNotIn('id', $getinventoryIDs)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
-            }
-        } else if ($id == 3) {
-            $batchIDs = IncomingOutgoingBatchNotification::where('School_ID', $sid)->where('BatchType', 1)->pluck('UserID');
-            if ($skey == 'null') {
-                $UserData = User::whereIn('access_type', [5, 6])->whereNotIn('id', $batchIDs)->get(['id', 'email']);
-            } else {
-                $UserData = User::whereIn('access_type', [5, 6])->whereNotIn('id', $batchIDs)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
-            }
-        } else if ($id == 4) {
-            $batchIDs = IncomingOutgoingBatchNotification::where('School_ID', $sid)->where('BatchType', 2)->pluck('UserID');
-            if ($skey == 'null') {
-                $UserData = $query->whereNotIn('id', $batchIDs)->get(['id', 'email']);
-            } else {
-                $UserData = $query->whereNotIn('id', $batchIDs)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
-            }
-        } else if ($id == 5) {
-            $InvoiceIDs = InvoiceCcSetting::where('School_ID', $sid)->pluck('UserID');
-            if ($skey == 'null') {
-                $UserData = $query->whereNotIn('id', $InvoiceIDs)->get(['id', 'email']);
-            } else {
-                $UserData = $query->whereNotIn('id', $InvoiceIDs)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
-            }
-        } else if ($id == 6) {
-            $signup = SignUpCcSetting::where('School_ID', $sid)->pluck('UserID');
-            if ($skey == 'null') {
-                $UserData = User::whereIn('access_type', [5])->whereNotIn('id', $signup)->get(['id', 'email']);
-            } else {
-                $UserData = User::whereIn('access_type', [5])->whereNotIn('id', $signup)->where('email', 'like', '%' . $skey . '%')->get(['id', 'email']);
-            }
-        }
-        return Response::json(['msg' => $UserData]) ?? null;
-    }
-
-function SaveEmails(Request $request)
+    function SaveEmails(Request $request)
     {
         $flag = $request->input('Flag');
         $emails = $request->input('Emails');
-        if ($flag == 1) {
+        $eventType = $request->input('EventType');
+      
             foreach ($emails as $email) {
                 $user = User::where('id', $email['id'])->first();
                 if ($user) {
-                    $existingTicketCcSetting = TicketCcSetting::where('UserID', $user->id)->first();
-                    if (!$existingTicketCcSetting) {
-                        $ticketccsetting = new TicketCcSetting();
-                        $ticketccsetting->School_ID = $user->school_id;
+                    $eventLog = NotificationEventsLog::where('UserID', $user->id)->where('EventID',$flag)->first();
+                    if (!$eventLog) {
+                        $ticketccsetting = new NotificationEventsLog();
+                       
+                        if($user->school_id == 0){                          
+                            $SchoolID = NULL;
+                        }else{
+                            $SchoolID = $user->school_id;
+                        }
+                        $ticketccsetting->SchoolID =  $SchoolID;
                         $ticketccsetting->UserID = $user->id;
+                        $ticketccsetting->EventID = $flag;
+                         $ticketccsetting->EventType = $eventType;
                         $ticketccsetting->save();
                     }
                 }
             }
-        } else if ($flag == 2) {
-            foreach ($emails as $email) {
-                $user = User::where('id', $email['id'])->first();
-                if ($user) {
-                    $existingInventoryCcSetting = InventoryCcSetting::where('UserID', $user->id)->first();
-                    if (!$existingInventoryCcSetting) {
-                        $inventoryccsetting = new InventoryCcSetting();
-                        $inventoryccsetting->School_ID = $user->school_id;
-                        $inventoryccsetting->UserID = $user->id;
-                        $inventoryccsetting->save();
-                    }
-                }
-            }
-        } else if ($flag == 3) {
-            foreach ($emails as $email) {
-                $user = User::where('id', $email['id'])->first();
-                if ($user) {
-                    $existingincomingCcSetting = IncomingOutgoingBatchNotification::where('UserID', $user->id)->where('BatchType', 1)->first();
-                    if (!$existingincomingCcSetting) {
-                        $incomingccsetting = new IncomingOutgoingBatchNotification();
-                        $incomingccsetting->BatchType = 1;
-                        $incomingccsetting->UserID = $user->id;
-                        $incomingccsetting->save();
-                    }
-                }
-            }
-        } else if ($flag == 4) {
-            foreach ($emails as $email) {
-                $user = User::where('id', $email['id'])->first();
-                if ($user) {
-                    $existoutgoingCcSetting = IncomingOutgoingBatchNotification::where('UserID', $user->id)->where('BatchType', 2)->first();
-                    if (!$existoutgoingCcSetting) {
-                        $outgoingccsetting = new IncomingOutgoingBatchNotification();
-                        $outgoingccsetting->School_ID = $user->school_id;
-                        $outgoingccsetting->BatchType = 2;
-                        $outgoingccsetting->UserID = $user->id;
-                        $outgoingccsetting->save();
-                    }
-                }
-            }
-        } else if ($flag == 5) {
-            foreach ($emails as $email) {
-                $user = User::where('id', $email['id'])->first();
-                if ($user) {
-                    $existinginvoiceCcSetting = InvoiceCcSetting::where('UserID', $user->id)->first();
-                    if (!$existinginvoiceCcSetting) {
-                        $invoiceccsetting = new InvoiceCcSetting();
-                        $invoiceccsetting->School_ID = $user->school_id;
-                        $invoiceccsetting->UserID = $user->id;
-                        $invoiceccsetting->save();
-                    }
-                }
-            }
-        } else if ($flag == 6) {
-            foreach ($emails as $email) {
-                $user = User::where('id', $email['id'])->first();
-                if ($user) {
-                    $existingsignupCcSetting = SignUpCcSetting::where('UserID', $user->id)->first();
-                    if (!$existingsignupCcSetting) {
-                        $signupccsetting = new SignUpCcSetting();
-                        $signupccsetting->UserID = $user->id;
-                        $signupccsetting->save();
-                    }
-                }
-            }
-        }
-        return "success";
+         return "success";
+        
+    } 
+     function deleteEmail($id, $flag)
+    {         
+       NotificationEventsLog::where('UserID',$id)->where('EventID',$flag)->forceDelete();       
+       return "success";
     }
-
-    function deleteEmail($id, $flag)
-    {
-        if ($flag == 1) {
-            $ticketccsetting = TicketCcSetting::where('UserID', $id)->delete();
-        } else if ($flag == 2) {
-            $ticketccsetting = InventoryCcSetting::where('UserID', $id)->delete();
-        } else if ($flag == 3) {
-            $ticketccsetting = IncomingOutgoingBatchNotification::where('UserID', $id)->where('BatchType', 1)->delete();
-        } else if ($flag == 4) {
-            $ticketccsetting = IncomingOutgoingBatchNotification::where('UserID', $id)->where('BatchType', 2)->delete();
-        } else if ($flag == 5) {
-            $ticketccsetting = InvoiceCcSetting::where('UserID', $id)->delete();
-        }
-        return "success";
-    }
+    
 
 }

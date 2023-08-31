@@ -46,6 +46,9 @@ use App\Models\SchoolBatchLog;
 use App\Http\Controllers\FedexController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class AdminAllSchoolController extends Controller {
 
     public function AllTicketsForAdminPanel($sid, $gridflag, $key, $skey, $sflag, $bid) {
@@ -170,6 +173,7 @@ class AdminAllSchoolController extends Controller {
         $batch_data_array = array();
         $batch = CloseTicketBatchLog::where('Batch_Id', $batchid)->get();
         $batchData = CloseTicketBatch::where('ID', $batchid)->select('Name', 'School_ID', 'Amount', 'Date')->first();
+
         $invoice = InvoiceLog::where('Batch_ID', $batchid)->first();
         $schooldata = School::where('ID', $invoice->School_Id)->first();
         $batchName = $batchData->Name;
@@ -318,7 +322,7 @@ class AdminAllSchoolController extends Controller {
         ]);
     }
 
-     function createInvoiceBatchwithFedex(Request $request) {
+    function createInvoiceBatchwithFedex(Request $request) {
         if ($request->input('BatchFlag') == 1) {
             $result = $this->CreateBatchForAdminPage($request);
             return $result;

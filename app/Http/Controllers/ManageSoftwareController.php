@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ManageSoftware;
 use Illuminate\Http\Request;
-use Aws\S3\S3Client;
 use Illuminate\Support\Facades\Storage;
+
 class ManageSoftwareController extends Controller
 {
     function GetAllSoftware($sid, $searchkey, $skey, $sflag, $page, $limit)
@@ -43,7 +43,7 @@ class ManageSoftwareController extends Controller
         );
     }
 
- function addupdatesoftware(Request $request)
+    function addupdatesoftware(Request $request)
     {
         if ($request->input('addupdateflag') == 1) {
             $software = new ManageSoftware();
@@ -90,7 +90,7 @@ class ManageSoftwareController extends Controller
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
                     $file = fopen($Document, 'r');
-                    $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
+                    $filename = 'Software/' . $request->input('ID'). '_' . time() . '.pdf';
                     Storage::disk('public')->put($filename, $file);
                     ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filename]);
                 }

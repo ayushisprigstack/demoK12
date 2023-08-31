@@ -9,9 +9,11 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Model;
 
-class AdminCorporateStaffCcSetting extends Model
+class NotificationEvents extends Model
 {
     use HasApiTokens, HasFactory, Notifiable;
-    protected $table="admin_corporate_staffs";
+    protected $table="notification_events";
+    
+    
      
 }

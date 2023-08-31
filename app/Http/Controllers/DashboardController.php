@@ -72,14 +72,16 @@ class DashboardController extends Controller {
                             ->orWhereNull('tickets.school_id');
                         })->groupBy('ticket_status.status');
 
-        if ($building !== 'null' && $grade !== 'null') {
-            $allstatuses->where('inventory_management.Building', $building)->where('students.Grade', $grade);
-        } elseif ($building === 'null' && $grade !== 'null') {
-            $allstatuses->where('students.Grade', $grade);
-        } elseif ($building !== 'null' && $grade === 'null') {
-            $allstatuses->where('inventory_management.Building', $building);
-        }
-        $allstatuses->whereNotNull('student_inventories.Student_ID');
+if ($building !== 'null' && $grade !== 'null') {
+$allstatuses->where('inventory_management.Building', $building)->where('students.Grade', $grade);
+$allstatuses->whereNotNull('student_inventories.Student_ID');
+} elseif ($building === 'null' && $grade !== 'null') {
+$allstatuses->where('students.Grade', $grade);
+$allstatuses->whereNotNull('student_inventories.Student_ID');
+} elseif ($building !== 'null' && $grade === 'null') {
+$allstatuses->where('inventory_management.Building', $building);
+$allstatuses->whereNotNull('student_inventories.Student_ID');
+}
 
         $results = $allstatuses->get();
         $statuses = $allstatuses->groupBy('ticket_status.ID', 'ticket_status.status')->get();

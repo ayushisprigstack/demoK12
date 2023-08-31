@@ -22,4 +22,4 @@ class InventoryManagement extends Model
     public function building(){
         return $this->belongsTo(Building::class, 'Building', 'ID');
     }
-}
+    }

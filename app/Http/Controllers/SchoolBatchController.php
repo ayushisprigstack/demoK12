@@ -49,6 +49,8 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Location;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Models\NotificationEvents;
+use App\Models\NotificationEventsLog;
 class SchoolBatchController extends Controller {
 
     function saveSchoolBatches(Request $request) {
@@ -102,12 +104,12 @@ class SchoolBatchController extends Controller {
                         $count++;
                         Ticket::where('ID', $tickets['id'])->update(['ticket_status' => 3]);
                     }
-                    $ccRecipients = IncomingOutgoingBatchNotification::all();
+                  $ccRecipients = NotificationEventsLog::where('EventID',4)->pluck('UserID')->all();
                     if (isset($ccRecipients)) {
                         $schoolname = School::where('ID', $request->input('SchoolId'))->select('name')->first();
                         foreach ($ccRecipients as $recipent) {
-                            if ($recipent->BatchType == 2) {
-                                $staffmember = User::where('id', $recipent->UserID)->first();
+                         
+                                $staffmember = User::where('id', $recipent)->first();
                                 $data = [
                                     'name' => $staffmember->first_name . '' . $staffmember->last_name,
                                     'batchname' => $schoolBatch->BatchName,
@@ -115,32 +117,17 @@ class SchoolBatchController extends Controller {
                                     'batchnotes' => $schoolBatch->Notes,
                                     'totaltickets' => $count,
                                 ];
-
+                               
                                 try {
-                                    Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
-                                } catch (\Exception $e) {
-                                    Log::error("Mail sending failed: " . $e->getMessage());
-                                }
-                            } else {
-                                $staffmember = User::where('id', $recipent->UserID)->first();
-                                $data = [
-                                    'name' => $staffmember->first_name . '' . $staffmember->last_name,
-                                    'batchname' => $schoolBatch->BatchName,
-                                    'school_name' => $schoolname->name,
-                                    'batchnotes' => $schoolBatch->Notes,
-                                    'totaltickets' => $count,
-                                ];
-
-                                try {
-                                    Mail::to($staffmember->email)->send(new incomingBatchMailer($data));
-                                } catch (\Exception $e) {
-                                    Log::error("Mail sending failed: " . $e->getMessage());
-                                }
+                                 Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
                             }
+                       
                         }
-                        $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
-                        $imageData = file_get_contents($shipmentData['url']);
-                        $filename = 'FedExQrCodes/' . $schoolBatch->id . $randomString . '.jpg'; // assuming JPEG format, adjust extension if different
+                         $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+                      $imageData = file_get_contents($shipmentData['url']);                       
+                        $filename = 'FedExQrCodes/' . $schoolBatch->id .$randomString.'.jpg'; // assuming JPEG format, adjust extension if different
 // Save to public directory
                         Storage::disk('public')->put($filename, $imageData);
                         if (!Storage::disk('public')->exists('FedExQrCodes')) {
@@ -168,12 +155,11 @@ class SchoolBatchController extends Controller {
                 Ticket::where('ID', $tickets['id'])->update(['ticket_status' => 3]);
             }
 
-            $ccRecipients = IncomingOutgoingBatchNotification::all();
+          $ccRecipients = NotificationEventsLog::where('EventID',4)->pluck('UserID')->all();
             if (isset($ccRecipients)) {
                 $schoolname = School::where('ID', $request->input('SchoolId'))->select('name')->first();
-                foreach ($ccRecipients as $recipent) {
-                    if ($recipent->BatchType == 2) {
-                        $staffmember = User::where('id', $recipent->UserID)->first();
+                foreach ($ccRecipients as $recipent) {                 
+                        $staffmember = User::where('id',$recipent)->first();
                         $data = [
                             'name' => $staffmember->first_name . '' . $staffmember->last_name,
                             'batchname' => $schoolBatch->BatchName,
@@ -181,27 +167,15 @@ class SchoolBatchController extends Controller {
                             'batchnotes' => $schoolBatch->Notes,
                             'totaltickets' => $count,
                         ];
-
+                        
+                        
                         try {
-                            Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
-                        } catch (\Exception $e) {
-                            Log::error("Mail sending failed: " . $e->getMessage());
-                        }
-                    } else {
-                        $staffmember = User::where('id', $recipent->UserID)->first();
-                        $data = [
-                            'name' => $staffmember->first_name . '' . $staffmember->last_name,
-                            'batchname' => $schoolBatch->BatchName,
-                            'school_name' => $schoolname->name,
-                            'batchnotes' => $schoolBatch->Notes,
-                            'totaltickets' => $count,
-                        ];
-                        try {
-                            Mail::to($staffmember->email)->send(new incomingBatchMailer($data));
-                        } catch (\Exception $e) {
-                            Log::error("Mail sending failed: " . $e->getMessage());
-                        }
-                    }
+                               Mail::to($staffmember->email)->send(new outgoingBatchMailer($data));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
+                        
+        
                 }
             }
             return response()->json([

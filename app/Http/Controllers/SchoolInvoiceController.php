@@ -79,12 +79,13 @@ class SchoolInvoiceController extends Controller
                  'schoolName' => $schoolData->name,
                  'batchName'=>$batchName
              ];            
-              try {
-            Mail::to('Info@k12techrepairs.com')->send(new SchoolToAdminMailer($data));
-        } catch (\Exception $e) {
-            Log::error("Mail sending failed: " . $e->getMessage());
-        }
-        return 'success';
+           
+             try {
+                                 Mail::to('Info@k12techrepairs.com')->send(new SchoolToAdminMailer($data));
+                            } catch (\Exception $e) {
+                                Log::error("Mail sending failed: " . $e->getMessage());
+                            }
+            return 'success';
     }
     
     function downloadReceipt($invoiceId){        

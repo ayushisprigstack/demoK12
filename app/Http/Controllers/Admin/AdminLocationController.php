@@ -68,7 +68,7 @@ class AdminLocationController extends Controller {
         }
     }
 
-    function LocationAddress($skey, $sortkey, $sortflag, $page, $limit)
+function LocationAddress($skey, $sortkey, $sortflag, $page, $limit)
     {
         $defaultAddress = Location::where('ID', 1)->first();
 

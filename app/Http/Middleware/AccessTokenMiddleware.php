@@ -13,15 +13,15 @@ class AccessTokenMiddleware
         $accessToken = $request->header('Authorization') ?: $request->query('access_token');
         if (!$accessToken) {          
             return response()->json(['error' => 'Access token not provided.'], 401);
-        }
-
-       $user = User::where('remember_token', $accessToken)->first();
+        }      
+   
+        $user = User::where('remember_token', $accessToken)->first();
 
         if (!$user) {
             return response()->json(['error' => 'Invalid access token.'], 401);
-       }
+        }
 
-       Auth::setUser($user);
+        Auth::setUser($user);
 
  
         

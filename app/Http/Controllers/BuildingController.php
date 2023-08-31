@@ -30,10 +30,12 @@ use DateTime;
 use App\Models\DeviceAllocationLog;
 use App\Models\Building;
 
-class BuildingController extends Controller {
-    
-  
-    function addUpdateBuildings(Request $request) {
+class BuildingController extends Controller
+{
+
+
+    function addUpdateBuildings(Request $request)
+    {
         $buildingName = $request->input('Building');
         $schoolId = $request->input('SchoolID');
         $addUpdateFlag = $request->input('AddUpdateFlag');
@@ -48,67 +50,55 @@ class BuildingController extends Controller {
         }
         return 'success';
     }
-    
-    function getBuildingDataById($id){
-        $get = Building::where('ID',$id)->first();
-          return response()->json(
-                        collect([
-                    'response' => 'success',
-                    'msg' => $get,
-        ]));
-    }
-    
-    function deleteBuilding($id){
-        Building::where('ID',$id)->forceDelete();
-         return 'success';
-    }
-    
-function allBuildings($sid, $skey, $sortkey, $sflag, $page, $limit)
-{
-    $query = ($skey == 'null')
-        ? Building::where('SchoolID', $sid)
-        : Building::where('SchoolID', $sid)->where(function ($query) use ($skey) {
-            $query->where('Building', 'LIKE', "%$skey%");
-        });
 
-    if ($page !== 'null') {
-        $results = $query->paginate($limit, ['*'], 'page', $page);
-        $data = $results->items();
-    } else {
-        $data = $query->get();
+    function getBuildingDataById($id)
+    {
+        $get = Building::where('ID', $id)->first();
+        return response()->json(
+            collect([
+                'response' => 'success',
+                'msg' => $get,
+            ])
+        );
+           
     }
 
-    if ($sortkey == 1) {
-        $sortColumn = 'Building';
-    } elseif ($sortkey == 2) {
-        $sortColumn = 'created_at';
-    } else {
-        $sortColumn = 'ID';
+    function deleteBuilding($id)
+    {
+        Building::where('ID', $id)->forceDelete();
+        return 'success';
     }
 
-    $sortDirection = ($sflag == 'desc') ? SORT_DESC : SORT_ASC;
 
-    // Sort only the paginated results or the retrieved data
-    usort($data, function ($a, $b) use ($sortColumn, $sortDirection) {
-        if ($a[$sortColumn] == $b[$sortColumn]) return 0;
-        if ($sortDirection == SORT_DESC) {
-            return $a[$sortColumn] > $b[$sortColumn] ? -1 : 1;
+    function allBuildings($sid, $skey, $sortkey, $sflag, $page, $limit)
+    {
+        $query = ($skey == 'null')
+            ? Building::where('SchoolID', $sid)
+            : Building::where('SchoolID', $sid)->where(function ($query) use ($skey) {
+                $query->where('Building', 'LIKE', "%$skey%");
+            });
+
+        if ($sortkey == 1) {
+            $sortColumn = 'Building';
+        } elseif ($sortkey == 2) {
+            $sortColumn = 'created_at';
         } else {
-            return $a[$sortColumn] < $b[$sortColumn] ? -1 : 1;
+            $sortColumn = 'ID';
         }
-    });
 
-    if ($page !== 'null') {
-        $results->setCollection(collect($data));
-    } else {
-        $results = $data;
+        $sortDirection = ($sflag == 'desc') ? 'desc' : 'asc';
+        if ($page == 'null') {          
+            $results = $query->get();
+        } else {
+            $results = $query->orderBy($sortColumn, $sortDirection)->paginate($limit, ['*'], 'page', $page);
+        }
+
+
+        return response()->json([
+            'response' => 'success',
+            'msg' => $results,
+        ]);
     }
-
-    return response()->json([
-        'response' => 'success',
-        'msg' => $results
-    ]);
-}
 
 
 

@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\Log;
 class AddTechnicianController extends Controller {
 
     function addUpdateK12User(Request $request) {
-        try {
+        // try {
             if ($request->input('id') !== 0) {
                 $k12userID = $request->input('id');
                 $userFirstName = $request->input('firstname');
@@ -137,27 +137,28 @@ class AddTechnicianController extends Controller {
                     'email' => $K12user->email,
                     'accessType' => $accessType->access_type
                 ];
-
-               try {
-                    Mail::to($K12user->email)->send(new AddK12UserMailer($data));
-                } catch (\Exception $e) {
-                    Log::error("Mail sending failed: " . $e->getMessage());
-                }
+                    try {
+                        Mail::to($K12user->email)->send(new AddK12UserMailer($data));
+                    } catch (\Exception $e) {
+                        Log::error("Mail sending failed: " . $e->getMessage());
+                    }
+               
 
                 return Response::json(array(
                             'status' => "success",
                 ));
             }
-        } catch (\Throwable $th) {
-            return Response::json(array(
-                        'status' => "Error",
-            ));
-        }
+        // } catch (\Throwable $th) {
+        //     return Response::json(array(
+        //                 'status' => "Error",
+        //     ));
+        // }
     }
 
- function allK12User($skey, $sortbykey, $sortbyflag, $page, $limit)
+   function allK12User($skey, $sortbykey, $sortbyflag, $page, $limit)
     {
         if ($skey == 'null') {
+
             $k12users = K12User::query();
         } else {
             $k12users = K12User::where(function ($query) use ($skey) {
