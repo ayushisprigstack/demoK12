@@ -65,9 +65,11 @@ use App\Models\NotificationEventsLog;
 use App\Models\ContactUs;
 use App\Http\Controllers\StripController;
 
-class AdminInsurancePlanController extends Controller {
+class AdminInsurancePlanController extends Controller
+{
 
-    function AddUpdateInsurancePlan(Request $request) {
+    function AddUpdateInsurancePlan(Request $request)
+    {
         $schoolID = $request->input('SchoolId');
         $schoolName = $request->input('SchoolName');
         $contactName = $request->input('ContactName');
@@ -137,12 +139,14 @@ class AdminInsurancePlanController extends Controller {
         return 'success';
     }
 
-    function getAllOtherProducts() {
+    function getAllOtherProducts()
+    {
         $get = ProductsForInsurancePlan::all();
         return $get;
     }
 
-    function getAllPlans($sid, $skey, $pflag) {
+    function getAllPlans($sid, $skey, $pflag)
+    {
         $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school');
 
         if ($sid != 'null') {
@@ -166,16 +170,25 @@ class AdminInsurancePlanController extends Controller {
         if ($skey != 'null') {
             $planQuery->where(function ($query) use ($skey) {
                 $query->where('PlanName', 'like', '%' . $skey . '%')
-                        ->orWhere('SchoolName', 'like', '%' . $skey . '%')
-                        ->orWhere('ContactName', 'like', '%' . $skey . '%')
-                        ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
-                        ->orWhere('Price', 'like', '%' . $skey . '%')
-                        ->orWhereHas('coverdServices.services', function ($innerQuery) use ($skey) {
-                            $innerQuery->where('Name', 'like', '%' . $skey . '%');
-                        });
+                    ->orWhere('SchoolName', 'like', '%' . $skey . '%')
+                    ->orWhere('ContactName', 'like', '%' . $skey . '%')
+                    ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
+                    ->orWhere('Price', 'like', '%' . $skey . '%')
+                    ->orWhereHas('coverdServices.services', function ($innerQuery) use ($skey) {
+                        $innerQuery->where('Name', 'like', '%' . $skey . '%');
+                    });
             });
         }
         $plan = $planQuery->orderByDesc('ID')->get();
+        $school = School::where('ID', $sid)->first();
+        $count = InsurancePlan::where('SchoolID', $sid)->where('Status', 'Live')->count();
+        $formattedSchoolName = strtolower(str_replace(' ', '-', $school->name));
+        if ($count > 0) {
+            $url = 'plan/' . $formattedSchoolName . '/' . $sid;
+        } else {
+            $url = null;
+        }
+
         $today = Carbon::today();
         foreach ($plan as $data) {
             if (Carbon::parse($data->EndDate)->lt($today)) {
@@ -193,19 +206,25 @@ class AdminInsurancePlanController extends Controller {
                 $data->color_code = '#F9BDB5';
             }
         }
-        return $plan;
+        return response()->json([
+            'status' => 'success',
+            'plan' => $plan,
+            'url' => $url
+        ]);
     }
 
-    function getPlanById($pid) {
+    function getPlanById($pid)
+    {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $pid)->first();
         return $plan;
     }
 
-    function getAllPlanForAdmin($pid) {
+    function getAllPlanForAdmin($pid)
+    {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')
-                ->where('ID', $pid)
-                ->orderByDesc('ID')
-                ->first();
+            ->where('ID', $pid)
+            ->orderByDesc('ID')
+            ->first();
 
         $allServices = ProductsForInsurancePlan::all();
 
@@ -213,17 +232,17 @@ class AdminInsurancePlanController extends Controller {
             $used = $plan->coverdServices->pluck('ServiceID')->contains($service->ID);
             if ($used) {
                 $servicePrice = CoverdServiceLog::where('PlanID', $plan->ID)
-                                ->where('ServiceID', $service->ID)
-                                ->first()
-                        ->Price;
+                    ->where('ServiceID', $service->ID)
+                    ->first()
+                    ->Price;
             } else {
                 $servicePrice = $service->Price;
             }
             return [
-        'ID' => $service->ID,
-        'ServiceName' => $service->Name,
-        'Price' => $servicePrice,
-        'used' => $used ? 'yes' : 'no',
+                'ID' => $service->ID,
+                'ServiceName' => $service->Name,
+                'Price' => $servicePrice,
+                'used' => $used ? 'yes' : 'no',
             ];
         });
 
@@ -233,7 +252,8 @@ class AdminInsurancePlanController extends Controller {
         return response()->json($plan);
     }
 
-    function createAndStoreInsurancePlanPdf($planid) {
+    function createAndStoreInsurancePlanPdf($planid)
+    {
         $data = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school')->where('ID', $planid)->first();
         $filename = 'InsurancePlan/' . $planid . '_' . time() . '.pdf';
         $pdf = PDF::loadView('insurancePlanPdf', ['data' => $data]);
@@ -241,7 +261,8 @@ class AdminInsurancePlanController extends Controller {
         InsurancePlan::where('ID', $planid)->update(['Pdf' => $filename]);
     }
 
-    function setPlanServicesPrice(Request $request) {
+    function setPlanServicesPrice(Request $request)
+    {
         $schoolID = $request->input('SchoolId');
         $planID = $request->input('PlanId');
         $servicesArray = $request->input('Services');
@@ -283,7 +304,8 @@ class AdminInsurancePlanController extends Controller {
         return 'success';
     }
 
-    function confirmPlan(Request $request) {
+    function confirmPlan(Request $request)
+    {
         $schoolId = $request->input('SchoolId');
         $planId = $request->input('PlanId');
         $flag = $request->input('Flag');
@@ -319,7 +341,7 @@ class AdminInsurancePlanController extends Controller {
 
         foreach ($recipients as $recipient) {
             if ($recipient === $plan->ContactEmail) {
-                $name = $plan->ContactName;  // Assuming there's a ContactName column in the plan table
+                $name = $plan->ContactName; // Assuming there's a ContactName column in the plan table
                 $email = $plan->ContactEmail;
             } else {
                 $staffmember = User::where('id', $recipient)->first();
@@ -341,7 +363,8 @@ class AdminInsurancePlanController extends Controller {
         return 'success';
     }
 
-    function getPlanByPlanNum($planmum) {
+    function getPlanByPlanNum($planmum)
+    {
         $plan = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('PlanNum', $planmum)->first();
         $today = Carbon::today();
         if (Carbon::parse($plan->EndDate)->lt($today)) {
@@ -350,42 +373,70 @@ class AdminInsurancePlanController extends Controller {
         return $plan;
     }
 
-    function purchasePlan(Request $request) {
+    function purchasePlan(Request $request)
+    {
         $studentNum = $request->input('StudentNo');
+
         $email = $request->input('Email');
         $paidAmount = $request->input('Total');
         $schoolID = $request->input('SchoolID');
         $grade = $request->input('Grade');
         $planID = $request->input('PlanId');
         $otherServiceArray = $request->input('OtherProducts');
-        $stripController = new StripController();
-        $paymentDataResponse = $stripController->teststrip($request);
-        $paymentData = $paymentDataResponse->original;        
-        if ($paymentData['msg'] == 'error') {
-            return response()->json(['msg' => 'stripe payment have some issue', 'status' => 'error']);
-        } else {
-            $enrollment = new InsurancePlanEnrollment;
-            $enrollment->SchoolID = $schoolID;
-            $enrollment->PlanID = $schoolID;
-            $enrollment->StudentID = $studentNum;
-            $enrollment->PaidAmount = $paidAmount;
-            $enrollment->StripCustomerID = $paymentData['customer_id'];
-            $enrollment->save();
+        $student = Student::where('Student_num', $studentNum)->where('School_ID', $schoolID)->first();
+        $planEndDateFlag = $request->input('Flag');
+        // $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
+        // $response = $request->input('Captcha');
+        // $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
+        // if ($resp->isSuccess()) {
+        if (isset($student)) {
+            $stripController = new StripController();
+            $paymentDataResponse = $stripController->teststrip($request);
+            $paymentData = $paymentDataResponse->original;
+            if ($paymentData['msg'] == 'error') {
+                return response()->json(['msg' => 'stripe payment have some issue', 'status' => 'error']);
+            } else {
+                $enrollment = new InsurancePlanEnrollment;
+                $enrollment->SchoolID = $schoolID;
+                $enrollment->PlanID = $planID;
+                $enrollment->StudentID = $student->ID;
+                $enrollment->PaidAmount = $paidAmount;
+                $enrollment->StripCustomerID = $paymentData['customer_id'];
+                $enrollment->Grade = $grade;
+                $enrollment->Email = $email;
+                $enrollment->PlanStatus = $planEndDateFlag; //plan active 1 
+                $enrollment->save();
 
-            foreach ($otherServiceArray as $otherService) {
-                $enrollmentLog = new InsurancePlanEnrollmentLog;
-                $enrollmentLog->StudentID = $studentNum;
-                $enrollmentLog->ServiceID = $otherService['id'];
-                $enrollmentLog->PlanID = $planID;
-                $enrollmentLog->save();
-                
-                Student::where('Student_num',$studentNum)->where('School_ID',$schoolID)->update(['stripeCustomerID'=>$paymentData['customer_id']]);
+                foreach ($otherServiceArray as $otherService) {
+                    $enrollmentLog = new InsurancePlanEnrollmentLog;
+                    $enrollmentLog->StudentID = $student->ID;
+                    $enrollmentLog->ServiceID = $otherService['id'];
+                    $enrollmentLog->PlanID = $planID;
+                    $enrollmentLog->save();
+
+
+
+
+                    Student::where('Student_num', $studentNum)->where('School_ID', $schoolID)->update(['stripeCustomerID' => $paymentData['customer_id']]);
+                }
+                return response()->json(['msg' => 'payment successful', 'status' => 'success', 'customer_id' => $paymentData['customer_id']]);
             }
-            return response()->json(['msg' => 'payment successful', 'status' => 'success']);
+        } else {
+            return response()->json(['msg' => 'student num is not available in this school', 'status' => 'error']);
         }
+
+
+        //     }  else {
+//         return Response::json(array(
+//                     'response' => 'Reject',
+//                     'msg' => 'Invalid Captcha!',
+//                     'status' => 'error'
+//         ));
+// }
     }
 
-    function allPlansForAdmin($sid, $skey, $pflag) {
+    function allPlansForAdmin($sid, $skey, $pflag)
+    {
         $planQuery = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school');
 
         if ($sid != 'null') {
@@ -407,13 +458,13 @@ class AdminInsurancePlanController extends Controller {
         if ($skey != 'null') {
             $planQuery->where(function ($query) use ($skey) {
                 $query->where('PlanName', 'like', '%' . $skey . '%')
-                        ->orWhere('SchoolName', 'like', '%' . $skey . '%')
-                        ->orWhere('ContactName', 'like', '%' . $skey . '%')
-                        ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
-                        ->orWhere('Price', 'like', '%' . $skey . '%')
-                        ->orWhereHas('coverdServices.services', function ($innerQuery) use ($skey) {
-                            $innerQuery->where('Name', 'like', '%' . $skey . '%');
-                        });
+                    ->orWhere('SchoolName', 'like', '%' . $skey . '%')
+                    ->orWhere('ContactName', 'like', '%' . $skey . '%')
+                    ->orWhere('ContactEmail', 'like', '%' . $skey . '%')
+                    ->orWhere('Price', 'like', '%' . $skey . '%')
+                    ->orWhereHas('coverdServices.services', function ($innerQuery) use ($skey) {
+                        $innerQuery->where('Name', 'like', '%' . $skey . '%');
+                    });
             });
         }
         $plan = $planQuery->orderByDesc('ID')->get();
@@ -431,7 +482,8 @@ class AdminInsurancePlanController extends Controller {
         return $plan;
     }
 
-    function contactUs(Request $request) {
+    function contactUs(Request $request)
+    {
         $studentNum = $request->input('StudentNumber');
         $question = $request->input('Question');
         $feedBack = $request->input('Feedback');
@@ -468,14 +520,140 @@ class AdminInsurancePlanController extends Controller {
             }
 
             return response()->json([
-                        'status' => 'success'
+                'status' => 'success'
             ]);
         } else {
             return response()->json([
-                        'status' => 'error',
-                        'msg' => 'something went wrong'
+                'status' => 'error',
+                'msg' => 'something went wrong'
             ]);
         }
     }
+
+    function getAllLivePlanBySchoolId($sid)
+    {
+        $school = School::where('ID', $sid)->first();
+        $get = InsurancePlan::with('coverdDeviceModels', 'coverdServices.services', 'school.logo')->where('SchoolID', $sid)->where('Status', 'Live')->get();
+        $count = $get->count();
+        $formattedSchoolName = strtolower(str_replace(' ', '-', $school->name));
+        if ($count > 0) {
+            $url = 'plan/' . $formattedSchoolName . '/' . $sid;
+        } else {
+            $url = null;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $get,
+            'url' => $url
+        ]);
+    }
+
+    function getServicesByPlanId($pid)
+    {
+        $checkPlanEndDate = InsurancePlan::where('ID',$pid)->first();
+    
+        if (Carbon::parse($checkPlanEndDate->EndDate)->lt(Carbon::now())) {
+          $planFlag = 0;
+        } else {
+            $planFlag = 1;
+        }
+        
+        $data = CoverdServiceLog::with([
+            'services' => function ($query) {
+                $query->orderBy('ID', 'asc');
+            },
+            'plan'
+        ])
+            ->where('PlanID', $pid)
+            ->get();
+
+        $data->map(function ($log) {
+            $log->serviceName = optional($log->services->first())->Name;
+            return $log;
+        });
+
+        $data->makeHidden(['created_at', 'updated_at', 'services']);
+        return response()->json([
+            'status' => 'success',
+            'msg' => $data,
+            'flag' => $planFlag
+        ]);       
+    }
+
+    function parentalCoveragePurchased($sid, $skey, $sortbykey, $sortbyflag)
+    {
+        $get = InsurancePlanEnrollment::with('student', 'plan')->where('SchoolID', $sid);
+        $coverdPlan = array();
+        $uncoverdPlan = array();
+
+    if ($skey != 'null') {
+        $get = $get->where(function ($query) use ($skey) {
+            $query->where('Email', 'like', '%' . $skey . '%')
+                ->orwhere('StripCustomerID','like', '%' . $skey . '%')
+                ->orWhere('PaidAmount', 'like', '%' . $skey . '%')
+                ->orWhereDate('created_at', $skey)
+                ->orWhereHas('student', function ($q) use ($skey) {
+                    $q->where('Student_num', 'like', '%' . $skey . '%');
+                })
+                ->orWhereHas('plan', function ($q) use ($skey) {
+                    $q->where('PlanName', 'like', '%' . $skey . '%');
+                });
+        });
+    }
+
+        if ($sortbykey == 1) {
+            if ($sortbyflag == 'asc') {
+                $get = $get->orderBy('insurance_plans.PlanName', 'asc');
+            } else {
+                $get = $get->orderBy('insurance_plans.PlanName', 'desc');
+            }
+        } elseif ($sortbykey == 2) {
+            if ($sortbyflag == 'asc') {
+                $get = $get->orderBy('student.Student_num', 'asc');
+            } else {
+                $get = $get->orderBy('student.Student_num', 'desc');
+            }
+        } elseif ($sortbykey == 3) {
+            if ($sortbyflag == 'asc') {
+                $get = $get->orderBy('StripCustomerID', 'asc');
+            } else {
+                $get = $get->orderBy('StripCustomerID', 'desc');
+            }
+        } elseif ($sortbykey == 4) {
+            if ($sortbyflag == 'asc') {
+                $get = $get->orderBy('PaidAmount', 'asc');
+            } else {
+                $get = $get->orderBy('PaidAmount', 'desc');
+            }
+        } elseif ($sortbykey == 5) {
+            if ($sortbyflag == 'asc') {
+                $get = $get->orderBy('created_at', 'asc');
+            } else {
+                $get = $get->orderBy('created_at', 'desc');
+            }
+        } else {
+            $get = $get->orderBy('ID', 'desc');
+        }
+        $results = $get->get();
+        foreach($results as $data)
+        {
+           if($data->PlanStatus == 1)
+           {
+             array_push($coverdPlan,$data);
+           }else{
+            array_push($uncoverdPlan,$data);
+           }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'coverPlan' => $coverdPlan,
+            'uncoverPlan' => $uncoverdPlan
+        ]);
+
+    }
+
+
 
 }

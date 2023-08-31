@@ -77,6 +77,7 @@ class StaffMemberController extends Controller {
             } else {
                 $array_allUser = $sflag == 'desc' ? $array_allUser->sortByDesc('id') : $array_allUser->sortBy('id');
             }
+            
         }
         $final = $array_allUser->values();
         $Access = Access::whereNotIn('ID', [5, 6, 7])->get();
@@ -88,6 +89,7 @@ class StaffMemberController extends Controller {
             'access' => $Access
         ]);
     }
+
     function updateUserData($uid) {
         $data = User::where('ID', $uid)->get();
         return Response::json(array(
@@ -170,6 +172,7 @@ try {
                             } catch (\Exception $e) {
                                 Log::error("Mail sending failed: " . $e->getMessage());
                             }
+
                     return Response::json(array(
                                 'status' => "success",
                     ));
@@ -209,9 +212,5 @@ try {
         }
     }
     
-    function takeAccesstoken($userid){
-        $get = User::where('id',$userid)->first();
-        return $get;
-    }
-
+    
 }

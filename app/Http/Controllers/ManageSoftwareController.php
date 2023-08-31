@@ -90,7 +90,7 @@ class ManageSoftwareController extends Controller
                 $Document = $request->file('Document');
                 if ($request->file('Document')) {
                     $file = fopen($Document, 'r');
-                    $filename = 'Software/' . $software->id . '_' . time() . '.pdf';
+                    $filename = 'Software/' . $request->input('ID'). '_' . time() . '.pdf';
                     Storage::disk('public')->put($filename, $file);
                     ManageSoftware::where('ID', $MatchwithId->ID)->update(['Document' => $filename]);
                 }
@@ -101,6 +101,7 @@ class ManageSoftwareController extends Controller
         }
         return 'success';
     }
+
 
     function GetSoftwareById($id)
     {

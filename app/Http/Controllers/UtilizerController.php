@@ -29,7 +29,7 @@ class UtilizerController extends Controller {
                         $join->on('im.ID', '=', 'si.Inventory_ID')
                         ->orWhere('im.ID', '=', 'si.Loner_ID');
                     })
-                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name', 's.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num', 's.Grade',
+                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name', 's.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num','s.Grade',
                             DB::raw("GROUP_CONCAT(CONCAT(im.Device_model, IF(im.inventory_status = 3, '(Loaner)', '(Active)'), '(', im.Serial_number, ')') SEPARATOR ', ') as model"),
                             DB::raw("GROUP_CONCAT(CONCAT(im.Device_model, '(', im.Serial_number, ')')) AS serialnum"))
                     ->where('s.School_ID', $sid)
@@ -42,7 +42,7 @@ class UtilizerController extends Controller {
                         $join->on('im.ID', '=', 'si.Inventory_ID')
                         ->orWhere('im.ID', '=', 'si.Loner_ID');
                     })
-                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name', 's.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num', 's.Grade',
+                    ->select('s.ID as utilizerid', 's.School_ID as schId', 's.Device_user_first_name', 's.Device_user_last_name','s.Parent_guardian_name', 's.Parent_Guardian_Email', 's.Student_num','s.Grade',
                             DB::raw("GROUP_CONCAT(CONCAT(im.Device_model, IF(im.inventory_status = 3, '(Loaner)', '(Active)'), ' ', ' ') SEPARATOR '') as model"))
                     ->where('s.School_ID', $sid)
                     ->where(function ($query) use ($skey) {
@@ -115,7 +115,7 @@ class UtilizerController extends Controller {
             foreach ($getdata as $data) {
 
                 $studentinventories = StudentInventory::where('Inventory_ID', $data['Inventory_ID'])->forceDelete();
-                DeviceAllocationLog::where('Student_ID', $id)->where('Inventory_ID', $data['Inventory_ID'])->update(['Vacant_Date' => date("Y-m-d")]);
+                DeviceAllocationLog::where('Student_ID',$id)->where('Inventory_ID',$data['Inventory_ID'])->update(['Vacant_Date'=>date("Y-m-d")]);  
                 $ticket = Ticket::where('inventory_id', $data['Inventory_ID'])->update(['ticket_status' => 2]);
                 $inventory = InventoryManagement::where('ID', $data['Inventory_ID'])->update(['inventory_status' => 1]);
                 $get = Student::where('ID', $id)->forceDelete();
@@ -130,6 +130,7 @@ class UtilizerController extends Controller {
             ));
         }
     }
+
 
     function importUtilizer(Request $request) {
         try {
@@ -155,7 +156,7 @@ class UtilizerController extends Controller {
                 }
 
                 $data = array_combine($escapedheader, $columns);
-
+                $data = array_map('trim', $data);
                 $FirstName = $data['userfirstname'];
                 $LastName = $data['userlastname'];
                 $Grade = $data['grade'] != "" ? $data['grade'] : NULL;
@@ -262,7 +263,7 @@ class UtilizerController extends Controller {
             $inventoryData = InventoryManagement::where('ID', $Inventoryid)->first();
             array_push($devicearray, $inventoryData);
         }
-        $utilizerLog = DeviceAllocationLog::where('School_ID', $get->School_ID)->where('Student_ID', $id)->get();
+            $utilizerLog = DeviceAllocationLog::where('School_ID', $get->School_ID)->where('Student_ID',$id)->get();
         $data_array = array();
         foreach ($utilizerLog as $utilizerLogData) {
             $device = InventoryManagement::where('ID', $utilizerLogData['Inventory_ID'])->first();
@@ -272,8 +273,8 @@ class UtilizerController extends Controller {
         return Response::json(array(
                     'status' => "success",
                     'msg' => $get,
-                    'allocatedDevice' => $devicearray,
-                    'studentHistory' => $data_array,
+                    'allocatedDevice'=>$devicearray,
+                    'studentHistory'=>$data_array,
         ));
     }
 
@@ -415,5 +416,6 @@ class UtilizerController extends Controller {
         }
         return response()->json(['status' => 'success', 'msg' => $searchResults->values(), 'utilizerlog' => $data_array]);
     }
+
 
 }

@@ -38,9 +38,9 @@ use App\Models\Building;
 
 class InventoryController extends Controller {
 
-    public function uploadInventory(Request $request) {
-         set_time_limit(0);
+    public function uploadInventory(Request $request) {     
         try {
+             set_time_limit(0);
             $userId = $request->input('ID');
             $schId = $request->input('schId');
             $flag = $request->input('flag');
@@ -75,7 +75,8 @@ class InventoryController extends Controller {
                     $value;
                 }
 
-                $data = array_combine($escapedheader, $columns);               
+                $data = array_combine($escapedheader, $columns);    
+                $data = array_map('trim', $data);           
                 //withstudent data          
                 if ($flag == 1) {
                     $Device_manufacturer = $data['devicemanufacturer'];
@@ -114,6 +115,7 @@ class InventoryController extends Controller {
 $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumber'])->where('school_id', $schId)->first();
 
                     if (isset($savedInventory)) {
+                       
     $SerialNum = $savedInventory->Serial_number;
     $InventoryID = $savedInventory->ID;
     $CsvSerialNum = $data['serialnumber'];
@@ -135,8 +137,9 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
                     ]);
 
                     $studentinventory = StudentInventory::where('Inventory_Id', $InventoryID)->first();
-                        if (isset($studentinventory)) {
-
+                
+                        if (isset($studentinventory)) { 
+                                                                         
                             $savedStudent = Student::where('Student_num', $Student_num)->where('School_ID', $schId)->first();
                             if (isset($savedStudent)) {
                                 $updatedstudentDetail = Student::where('ID', $savedStudent->ID)
@@ -167,6 +170,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
                                 StudentInventory::where('Inventory_ID', $InventoryID)->where('School_ID', $schId)->update(['Student_ID' => $Student->id]);
                             }
                         }else{
+                          
                                 $Student = new Student;
                                 $Student->Device_user_first_name = $Device_user_first_name;
                                 $Student->Device_user_last_name = $Device_user_last_name;
@@ -550,6 +554,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
                     'msg' => $data,
         ]));
     }
+
     public function createStudent(Request $request,$inventory)
 {     
     $checkStudentNum = Student::where('School_ID', $request->input('schoolid'))->where('Student_num', $request->input('Studentnum'))->first();

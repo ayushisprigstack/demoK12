@@ -90,7 +90,7 @@ class AdminDomainController extends Controller {
         }
     }
 
-function AllDomain($skey, $flag,$page,$limit)
+   function AllDomain($skey, $flag,$page,$limit)
     {
         if ($skey == 'null') {
             $get = Domain::orderBy('Name', $flag)->paginate($limit, ['*'], 'page', $page);

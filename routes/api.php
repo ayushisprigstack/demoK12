@@ -59,19 +59,15 @@ Route::get('/getAllCommentsById/{id}', [SupportTicketController::class, 'getAllC
 Route::post('/addCommentsonSupportTicket', [SupportTicketController::class, 'addCommentsonSupportTicket']);
 Route::get('/setK12LoginasSchoolLogin/{email}&{sid}&{flag}', [AddTechnicianController::class, 'setK12LoginasSchoolLogin']);
 Route::get('/getPlanByPlanNum/{plannum}', [AdminInsurancePlanController::class, 'getPlanByPlanNum']);
-Route::post('/teststrip', [StripController::class, 'teststrip']);
 Route::post('/sameDomainSchoolContinueClick', [LoginController::class, 'sameDomainSchoolContinueClick']);
-Route::post('/sameDomainSchoolConfirmClick', [LoginController::class, 'sameDomainSchoolConfirmClick']);
 Route::post('/teststrip', [StripController::class, 'teststrip']);
-Route::get('/getstripedata/{custid}', [StripController::class, 'getstripedata']);
+Route::get('/getstripedata/{custid}&{sid}&{pid}', [StripController::class, 'getstripedata']);
 Route::post('/purchasePlan', [AdminInsurancePlanController::class, 'purchasePlan']);
+Route::post('/AddUpdateInsurancePlan', [AdminInsurancePlanController::class, 'AddUpdateInsurancePlan']);
+Route::get('/getAllLivePlanBySchoolId/{sid}', [AdminInsurancePlanController::class, 'getAllLivePlanBySchoolId']);
 //});
 
 //Route::middleware(['access.token'])->group(function () {
-    Route::get('/middlewareTesting', [LoginController::class, 'middlewareTesting']); 
-
-
-//testing here for github okay
 
 Route::get('/Tickets/{sid}&{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class,'Tickets']);
 Route::get('/menuAccess/{uid}', [LoginController::class, 'menuAccess']);
@@ -119,7 +115,7 @@ Route::get('/allAccess',[StaffMemberController::class,'allAccess']);
 Route::get('/getUserById/{uid?}',[StaffMemberController::class,'updateUserData']);
 Route::post('/deleteUser/{id}&{flag}', [StaffMemberController::class, 'deleteUser']);
 Route::post('/addUpdateUser', [StaffMemberController::class, 'addUpdateUser']);
-
+Route::get('/UtilizerExport/{sid}',[UtilizerController::class,'UtilizerExport']);
 
 //Utilizer 
 Route::get('/allUtilizer/{sid}&{skey}',[UtilizerController::class,'allUtilizer']);
@@ -283,6 +279,8 @@ Route::get('/getlocationAddressByID/{id}', [AdminLocationController::class, 'get
 Route::post('/getAccessToken', [FedexController::class, 'getAccessToken']);
 Route::post('/createShipment', [FedexController::class, 'createShipment']);
 //insurance
+Route::post('/AddInsurancePlan', [AdminInsurancePlanController::class, 'AddInsurancePlan']);
+Route::get('/getAllOtherProducts', [AdminInsurancePlanController::class, 'getAllOtherProducts']);
 Route::get('/getAllPlans/{sid}&{skey}&{flag}', [AdminInsurancePlanController::class, 'getAllPlans']);
 Route::get('/getPlanById/{pid}', [AdminInsurancePlanController::class, 'getPlanById']);
 Route::get('/getAllPlanForAdmin/{sid}', [AdminInsurancePlanController::class, 'getAllPlanForAdmin']);
@@ -295,4 +293,7 @@ Route::post('/testUpload', [LoginController::class, 'testUpload']);
 Route::get('/getOverAllData', [SchoolController::class, 'getOverAllData']);
 Route::post('/uploadtest', [InventoryController::class, 'upload']);
 Route::post('/createToken', [StripController::class, 'createToken']);
+Route::get('/getServicesByPlanId/{pid}', [AdminInsurancePlanController::class, 'getServicesByPlanId']);
+Route::get('/parentalCoveragePurchased/{sid}&{skey}&{sortbykey}&{sortbyflag}', [AdminInsurancePlanController::class, 'parentalCoveragePurchased']);
+Route::post('/importMasterInventory', [MasterInventoryController::class, 'importMasterInventory']); 
 //});

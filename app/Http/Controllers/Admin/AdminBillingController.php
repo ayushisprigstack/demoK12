@@ -135,7 +135,7 @@ class AdminBillingController extends Controller {
         return 'success';
     }
 
-    function AllBatchData($sid, $key, $skey, $sflag, $page, $limit)
+     function AllBatchData($sid, $key, $skey, $sflag, $page, $limit)
     {
         $query = CloseTicketBatch::with('invoice', 'batchLog.ticket.ticketAttachments')->where('School_ID', $sid)->select('ID', 'Amount', 'Name', 'Date', 'Notes', 'FedExQr', 'TrackingNum');
         $allBatch = $query->get();

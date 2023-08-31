@@ -72,18 +72,16 @@ class DashboardController extends Controller {
                             ->orWhereNull('tickets.school_id');
                         })->groupBy('ticket_status.status');
 
-          if ($building !== 'null' && $grade !== 'null') {
-            $allstatuses->where('inventory_management.Building', $building)->where('students.Grade', $grade);
-            $allstatuses->whereNotNull('student_inventories.Student_ID');
-        } elseif ($building === 'null' && $grade !== 'null') {
-            $allstatuses->where('students.Grade', $grade);
-            $allstatuses->whereNotNull('student_inventories.Student_ID');
-        } elseif ($building !== 'null' && $grade === 'null') {
-            $allstatuses->where('inventory_management.Building', $building);
-            $allstatuses->whereNotNull('student_inventories.Student_ID');
-        }
-//        $allstatuses->whereNotNull('student_inventories.Student_ID');
-
+if ($building !== 'null' && $grade !== 'null') {
+$allstatuses->where('inventory_management.Building', $building)->where('students.Grade', $grade);
+$allstatuses->whereNotNull('student_inventories.Student_ID');
+} elseif ($building === 'null' && $grade !== 'null') {
+$allstatuses->where('students.Grade', $grade);
+$allstatuses->whereNotNull('student_inventories.Student_ID');
+} elseif ($building !== 'null' && $grade === 'null') {
+$allstatuses->where('inventory_management.Building', $building);
+$allstatuses->whereNotNull('student_inventories.Student_ID');
+}
 
         $results = $allstatuses->get();
         $statuses = $allstatuses->groupBy('ticket_status.ID', 'ticket_status.status')->get();
@@ -164,8 +162,8 @@ class DashboardController extends Controller {
             } elseif ($ticket->ticket_status == 1 || $ticket->ticket_status == 3 || $ticket->ticket_status == 4 || $ticket->ticket_status == 5 || $ticket->ticket_status == 6) {
 
                 array_push($openTicket_array, $ticket);
-            }          
-            $ticket->SerialNum = $ticket->inventoryManagement->Serial_number ?? null;
+            }
+            $ticket->SerialNum = $ticket->inventoryManagement->Serial_number;
             $ticket->makeHidden(['inventoryManagement', 'updated_at']);
         }
         return response()->json(

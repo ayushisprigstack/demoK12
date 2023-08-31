@@ -30,12 +30,19 @@ use App\Models\Building;
 use App\Models\SupportTicketAssignment;
 use Illuminate\Support\Facades\Log;
 
+
 class SupportTicketController extends Controller
 {
 
     function getAllSupportTickets($skey, $sid, $uid, $flag, $sortkey, $sflag, $page, $limit)
     {
         $getUser = User::where('id', $uid)->first();
+        $get = SupportTicket::with('user')
+                ->where('Type', $flag)
+                ->where('SchoolId', $sid)
+                ->when($getUser->access_type != 1, function ($query) use ($uid) {
+            $query->where('AssignedTo', $uid);
+        });
 
         $openTicketsQuery = SupportTicket::with('user')
             ->where('Type', $flag)
@@ -166,19 +173,19 @@ class SupportTicketController extends Controller
             $supportComment->save();
 
             if ($Document !== null) {
-                $imageData = base64_decode($Document);
-                $filename = time() . '_' . rand(1000, 9999) . '.jpg'; // Example: 1629134523_1234.jpg
+            $imageData = base64_decode($Document);
+                $filename = time() . '_' . rand(1000, 9999) . '.jpg';  // Example: 1629134523_1234.jpg
                 $filePath = 'SupportTickets/' . $supportComment->id . '/' . $filename; // Store with the random filename
                 Storage::disk('public')->put($filePath, $imageData);
                 SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
-
+                
             }
-
+      
             //send mail
-            //school admin
-
+            //school admin 
+           
             $School = School::where('ID', $SchoolId)->first();
-            $userdata = User::where('school_id', $SchoolId)->where('access_type', 1)->first();
+            $userdata = User::where('school_id',$SchoolId)->where('access_type', 1)->first();
             $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
             $link = $frontendUrl . '/ticket/' . $School->schoolNumber . '/' . $ticket->SupportTicketNum . '/' . $ticket->TicketGuID;
             $linkWithoutGUID = $frontendUrl . '/ticket/' . $School->schoolNumber . '/' . $ticket->SupportTicketNum;
@@ -189,9 +196,9 @@ class SupportTicketController extends Controller
                     'ticketNum' => $ticket->Title,
                     'comment' => $Comment,
                     'link' => $link,
-                    'linkWithoutGUID' => $linkWithoutGUID,
+                    'linkWithoutGUID'=> $linkWithoutGUID,
                     'schoolName' => $School->name,
-                    'name' => $userdata->first_name . ' ' . $userdata->last_name,
+                    'name'=>$userdata->first_name . ' ' . $userdata->last_name,
                 ];
                 //                Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
 
@@ -305,7 +312,7 @@ class SupportTicketController extends Controller
         $supportTicket->Title = $request->input('Title');
         $supportTicket->Discription = $request->input('Description');
         $supportTicket->Name = $request->input('Name');
-        $supportTicket->Email = $request->input('Email');
+        $supportTicket->Email = $request->input('Email');        
         if ($request->input('Building') == 0) {
             $addBuilding = new Building;
             $addBuilding->Building = $request->input('BuildingName');

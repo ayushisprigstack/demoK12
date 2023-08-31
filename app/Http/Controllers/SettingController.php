@@ -71,6 +71,17 @@ class SettingController extends Controller
         $addupdateId = $request->input('AddUpdateId');
         $schoolName = $request->input('SchoolName');
         $school = School::where('ID', $schoolId)->first();
+
+        $check = Logo::where('School_ID', $schoolId)->first();       
+        if (isset($check)) {
+            Logo::where('School_ID', $schoolId)->update(['Logo_Path' => $uploadLogo]);
+        } else {
+            $logo = new Logo;
+            $logo->School_ID = $schoolId;
+            $logo->Logo_Path = $uploadLogo;
+            $logo->save();
+        }
+
         if ($addupdateId == 0) {
             $address = new SchoolAddress;
             $address->StreetLine = $streetLines;
@@ -91,22 +102,9 @@ class SettingController extends Controller
                 ));
             } else {
                 School::where('ID', $schoolId)->update(['name' => $schoolName]);
+                return Response::json(array('status' => "success"));
             }
-        }
-
-        $logoisset = Logo::where('School_ID', $schoolId)->where('Logo_Path', $request->input('UploadLogo'))->first();
-        if (!isset($logoisset)) {
-            $check = Logo::where('School_ID', $schoolId)->first();
-            if (isset($check)) {
-                Logo::where('School_ID', $schoolId)->update(['Logo_Path' => $uploadLogo]);
-            } else {
-                $logo = new Logo;
-                $logo->School_ID = $schoolId;
-                $logo->Logo_Path = $uploadLogo;
-                $logo->save();
-            }
-        }
-        return Response::json(array('status' => "success"));
+        }     
     }
 
     function GetAllNotifications($sid,$flag) {

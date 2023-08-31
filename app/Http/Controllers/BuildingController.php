@@ -60,6 +60,7 @@ class BuildingController extends Controller
                 'msg' => $get,
             ])
         );
+           
     }
 
     function deleteBuilding($id)
@@ -98,6 +99,7 @@ class BuildingController extends Controller
             'msg' => $results,
         ]);
     }
+
 
 
 }

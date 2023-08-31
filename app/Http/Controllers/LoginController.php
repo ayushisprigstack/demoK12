@@ -63,14 +63,14 @@ class LoginController extends Controller {
                     $menuID = $menuAcess->pluck('Menu')->all();
                     $flag = $usersavedemail->access_type;
                     $Menu = Menu::whereIN('ID', $menuID)->get();
-
+                    $updatedData = User::where('email', $request->input('email'))->first();
                     $SchoolDetails = School::where('ID', $usersavedemail->school_id)->first();
 
                     return Response::json(array(
                                 'status' => "success",
-                                'msg' => $usersavedemail,
+                                'msg' => $updatedData,
                                 'menu' => $Menu,
-                                'schoolDetails' => $SchoolDetails
+                                'schoolDetails'=>$SchoolDetails
                     ));
                 } else {
 
@@ -94,9 +94,9 @@ class LoginController extends Controller {
                         'flag' => 2
             ));
         }
-        return $usersavedemail->school_id;
+       
     }
-
+   
     function addUsers(Request $request) {
         $firstname = $request->input('FirstName');
         $lastname = $request->input('lastname');
@@ -110,11 +110,12 @@ class LoginController extends Controller {
         $response = $request->input('Captcha');
         $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
         if ($resp->isSuccess()) {
-        //email domain is match with db domain
-        foreach ($domainalldata as $data) {
-            $dataEmailDomain = $data->Name;
-            if ($requstedEmailDomain == $dataEmailDomain && $data->Status == 'active') {
-                $status = 'true';
+            //email domain is match with db domain
+            foreach ($domainalldata as $data) {
+                $dataEmailDomain = $data->Name;
+                if ($requstedEmailDomain == $dataEmailDomain && $data->Status == 'active') {
+                    $status = 'true';
+                }
             }
         }
         $userdata = User::with('school')->where('email', $email)->first();
@@ -166,8 +167,8 @@ class LoginController extends Controller {
                     $avatarId = $allAvtars[0];
                     $avatar = Avtar::find($avatarId);
                     $user->avtar = $avatar[0]->id;
-                    $user->save();
-                    //admin table 
+                    $user->save();                            
+
                     //mail send
                     $schoolname = School::where('ID', $user->school_id)->select('name')->first();
                     $data = [
@@ -237,6 +238,7 @@ class LoginController extends Controller {
                     'email' => $email,
                     'school_name' => $schoolname,
                     'domain' => $requstedEmailDomain,
+
                 ];
 
                 $mainUser = 'Info@k12techrepairs.com';
@@ -278,7 +280,7 @@ class LoginController extends Controller {
             ));
     }
     }
-
+    
     function sameDomainSchoolContinueClick(Request $request) {
         $firstname = $request->input('FirstName');
         $lastname = $request->input('lastname');
@@ -326,7 +328,7 @@ class LoginController extends Controller {
         return Response::json(array(
                     'link' => $url,
                     'status' => 'success',
-                     'msg'=>'administrator contact you for further assistance'
+                    'msg'=>'administrator contact you for further assistance'
         ));
     }
 
@@ -337,75 +339,70 @@ class LoginController extends Controller {
         return 'success';
     }
 
-    function menuAccess($uid) {
-        $userType = User::with('school')->where('id', $uid)->first();
-        $userType->schoolNum = $userType->school->schoolNumber ?? null;
+       function menuAccess($uid)
+{
+    $userType = User::with('school')->where('id', $uid)->first();
+    $userType->schoolNum = $userType->school->schoolNumber ?? null;
         $menuAccess = MenuAccess::where('Access_type', $userType->access_type)
                 ->where('Status', 'Active')
                 ->orderBy('MenuOrderID')
                 ->get();
 
-        $menuID = $menuAccess->pluck('Menu')->all();
-        $flag = ($userType->access_type == 5) ? 1 : 0;
-        $menuData = Menu::whereIn('ID', $menuID)->get();
 
-        $menuArray = [];
-        $submenuIDs = [];
-        foreach ($menuAccess as $access) {
+        $menuID = $menuAccess->pluck('Menu')->all();
+    $flag = ($userType->access_type == 5) ? 1 : 0;
+    $menuData = Menu::whereIn('ID', $menuID)->get();
+
+    $menuArray = [];
+    $submenuIDs = [];
+    foreach ($menuAccess as $access) {
+        $submenuIds = preg_split('/,/', $access->SubMenuID, -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach ($submenuIds as $submenuId) {
+            $submenuIDs = array_merge($submenuIDs, explode(',', $submenuId));
+        }
+    }
+
+    foreach ($menuAccess as $access) {
+        if (!in_array($access->Menu, $submenuIDs)) {
             $submenuIds = preg_split('/,/', $access->SubMenuID, -1, PREG_SPLIT_NO_EMPTY);
+            $submenu = [];
 
             foreach ($submenuIds as $submenuId) {
-                $submenuIDs = array_merge($submenuIDs, explode(',', $submenuId));
-            }
-        }
+                $submenuItems = $menuData->whereIn('ID', explode(',', $submenuId))->all();
 
-        foreach ($menuAccess as $access) {
-            if (!in_array($access->Menu, $submenuIDs)) {
-                $submenuIds = preg_split('/,/', $access->SubMenuID, -1, PREG_SPLIT_NO_EMPTY);
-                $submenu = [];
-
-                foreach ($submenuIds as $submenuId) {
-                    $submenuItems = $menuData->whereIn('ID', explode(',', $submenuId))->all();
-
-                    foreach ($submenuItems as $submenuItem) {
-                        $submenu[] = [
-                            'ID' => $submenuItem->ID,
-                            'Name' => $submenuItem->Name,
-                            'Href' => $submenuItem->Href,
-                            'Image' => $submenuItem->Image,
-                            'HrefFlag' => $submenuItem->HrefFlag,
-                            'SubMenuId' => $submenuItem->SubMenuId,
-                            'Submenu' => []
-                        ];
-                    }
-                }
-
-                $menuItem = $menuData->where('ID', $access->Menu)->first();
-
-                if ($menuItem) {
-                    $menuItem->Submenu = $submenu;
-
-                    $menuArray[] = $menuItem;
+                foreach ($submenuItems as $submenuItem) {
+                    $submenu[] = [
+                        'ID' => $submenuItem->ID,
+                        'Name' => $submenuItem->Name,
+                        'Href' => $submenuItem->Href,
+                        'Image' => $submenuItem->Image,
+                        'HrefFlag' => $submenuItem->HrefFlag,
+                        'SubMenuId' => $submenuItem->SubMenuId,
+                        'Submenu' => []
+                    ];
                 }
             }
-        }
-        usort($menuArray, function ($a, $b) {
-            return $a['MenuOrderID'] - $b['MenuOrderID'];
-        });
-        return response()->json([
-                    'status' => 'success',
-                    'msg' => $menuArray,
-                    'flag' => $flag,
-                    'user' => $userType
-        ]);
-    }
 
-    function middlewareTesting() {
-        try {
-            return 'success';
-        } catch (Exception $ex) {
-            return $ex;
+            $menuItem = $menuData->where('ID', $access->Menu)->first();
+
+            if ($menuItem) {
+                $menuItem->Submenu = $submenu;
+
+                $menuArray[] = $menuItem;
+            }
         }
     }
+ usort($menuArray, function ($a, $b) {
+        return $a['MenuOrderID'] - $b['MenuOrderID'];
+    });
+    return response()->json([
+        'status' => 'success',
+        'msg' => $menuArray,
+        'flag' => $flag,
+        'user' => $userType
+    ]);
+}
+
 
 }

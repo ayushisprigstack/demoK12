@@ -13,7 +13,8 @@ class UniqueKeyMiddleware
         if (!$accessToken) {           
             return response()->json(['error' => 'Access token not provided.'], 401);
         }
-             $key = '0ga7v0ipnufgfpC';
+    
+        $key = env('MIDDLEWARE_KEY');      
         if ($key != $accessToken) {
             return response()->json(['error' => 'Invalid access token.'], 401);
         }             

@@ -186,43 +186,27 @@ class SchoolBatchController extends Controller {
     }
 
 
-function getAllSchoolBatch($sid, $skey, $sortkey, $sflag, $page, $limit)
-{
-    if ($page == 'null' && $limit == 'null') {
-        $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->orderBy('ID', $sflag)->get();
-        return response()->json([
-            'response' => 'success',
-            'msg' => $get
-        ]);
-    }
-
-    // Step 1: First, paginate without any sorting.
-    if ($skey == 'null') {
-        $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->paginate($limit, ['*'], 'page', $page);
-    } else {
-        $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->paginate($limit, ['*'], 'page', $page);
-    }
-
-    // Step 2: Sort the retrieved results using PHP.
-    if ($sortkey == 1) {
-        if ($sflag === 'asc') {
-            $get = $get->sortBy('BatchName');
+    function getAllSchoolBatch($sid, $skey, $sortkey, $sflag) {
+        $sortField = '';
+        if ($sortkey == 1) {
+            $sortField = 'BatchName';
         } else {
-            $get = $get->sortByDesc('BatchName');
+            $sortField = 'ID';
         }
-    } else {
-        if ($sflag === 'asc') {
-            $get = $get->sortBy('ID');
+        if ($skey == 'null') {
+            $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->orderBy($sortField, $sflag)->get();
+            return response()->json([
+                        'response' => 'success',
+                        'msg' => $get
+            ]);
         } else {
-            $get = $get->sortByDesc('ID');
+            $get = SchoolBatch::where('SchoolId', $sid)->whereIn('Status', [1, 2])->where('BatchName', 'LIKE', "%$skey%")->orderBy($sortField, $sflag)->get();
+            return response()->json([
+                        'response' => 'success',
+                        'msg' => $get
+            ]);
         }
     }
-
-    return response()->json([
-        'response' => 'success',
-        'msg' => $get
-    ]);
-}
 
 
     function getSchoolBatchData($bid) {

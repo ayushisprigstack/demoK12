@@ -169,10 +169,11 @@ class AdminAllSchoolController extends Controller {
         }
     }
 
-    public function CreatePdfAndStore($batchid) {
+        public function CreatePdfAndStore($batchid) {
         $batch_data_array = array();
         $batch = CloseTicketBatchLog::where('Batch_Id', $batchid)->get();
         $batchData = CloseTicketBatch::where('ID', $batchid)->select('Name', 'School_ID', 'Amount', 'Date')->first();
+
         $invoice = InvoiceLog::where('Batch_ID', $batchid)->first();
         $schooldata = School::where('ID', $invoice->School_Id)->first();
         $batchName = $batchData->Name;
@@ -399,7 +400,7 @@ class AdminAllSchoolController extends Controller {
         ]));
     }
 
-    public function ExtraAttachedDocForBatch($batchid) {
+       public function ExtraAttachedDocForBatch($batchid) {
         $batch = CloseTicketBatch::where('ID', $batchid)->first();
         $url = $batch->Extra_Doc;
         if (isset($batch->Extra_Doc)) {
@@ -438,7 +439,7 @@ class AdminAllSchoolController extends Controller {
                 Ticket::where('ID', $batchData->Ticket_Id)->update(['ticket_status' => 2]);
             }
             try {
-                Mail::to('Info@k12techrepairs.com')->send(new AdminToSchoolMailer($data));
+                Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolMailer($data));
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
@@ -446,7 +447,7 @@ class AdminAllSchoolController extends Controller {
             $invoiceLogs = InvoiceLog::where('School_Id', $schoolId)->where('Batch_ID', $batchId)->where('ID', $invoiceId)->update(['Receipt' => $receipt, 'Admin_notes' => $notes]);
            
             try {
-                       Mail::to('Info@k12techrepairs.com')->send(new AdminToSchoolPaymentFailMailer($data));
+                       Mail::to('180770107548@socet.edu.in')->send(new AdminToSchoolPaymentFailMailer($data));
                     } catch (\Exception $e) {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }

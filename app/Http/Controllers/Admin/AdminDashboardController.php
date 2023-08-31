@@ -73,7 +73,7 @@ class AdminDashboardController extends Controller {
         ));
     }
 
-    function adminDashboardData($startDate, $endDate, $lid, $sid) {
+function adminDashboardData($startDate, $endDate, $lid, $sid) {
         set_time_limit(0);
         $startDate = Carbon::createFromFormat('m-d-Y', $startDate)->startOfDay();
         $endDate = Carbon::createFromFormat('m-d-Y', $endDate)->endOfDay();
@@ -133,6 +133,10 @@ class AdminDashboardController extends Controller {
             $totalamount = 0;
             foreach ($invoice as $invoicedata) {
                 $batchTicket = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->distinct()->pluck('Ticket_Id')->all();
+//                $batchTicketCount = count($batchTicket);
+//                $batchTicketCount = count($batchTicket);
+//                $batchTicketCount = count($batchTicket);
+//                $batchTicketCount = count($batchTicket);
                 $batchData = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->get();
                 foreach ($batchData as $batch) {
                     $totalamount += $batch->Batch_Sub_Total;

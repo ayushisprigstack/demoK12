@@ -158,6 +158,7 @@ class AddTechnicianController extends Controller {
    function allK12User($skey, $sortbykey, $sortbyflag, $page, $limit)
     {
         if ($skey == 'null') {
+
             $k12users = K12User::query();
         } else {
             $k12users = K12User::where(function ($query) use ($skey) {
@@ -221,6 +222,7 @@ class AddTechnicianController extends Controller {
             'access' => $Access
         ]);
     }
+
 
     function K12UserData($kuid) {
         $data = K12User::where('ID', $kuid)->first();
