@@ -64,6 +64,7 @@ Route::post('/teststrip', [StripController::class, 'teststrip']);
 Route::get('/getstripedata/{custid}&{sid}&{pid}', [StripController::class, 'getstripedata']);
 Route::post('/purchasePlan', [AdminInsurancePlanController::class, 'purchasePlan']);
 Route::get('/getAllLivePlanBySchoolId/{sid}', [AdminInsurancePlanController::class, 'getAllLivePlanBySchoolId']);
+Route::post('/sameDomainSchoolConfirmClick', [LoginController::class, 'sameDomainSchoolConfirmClick']);
 });
 
 Route::middleware(['access.token'])->group(function () {
