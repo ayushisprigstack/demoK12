@@ -31,11 +31,14 @@ use App\Models\SchoolParentalCoverageCcSetting;
 use App\Models\NotificationEvents;
 use App\Models\NotificationEventsLog;
 use App\Models\Student;
+
 class SettingController extends Controller
 {
    
 
-    function allMembers($sid, $uid) {
+
+    function allMembers($sid, $uid)
+    {
         $getUser = User::where('id', $uid)->first();
         $logodata = Logo::where('School_ID', $sid)->first();
         if (isset($logodata)) {
@@ -59,7 +62,8 @@ class SettingController extends Controller
         ]);
     }
 
-    function additionalSetting(Request $request) {
+    function additionalSetting(Request $request)
+    {
         $uploadLogo = $request->input('UploadLogo');
         $schoolId = $request->input('SchoolId');
         $streetLines = $request->input('StreetLines');
@@ -97,9 +101,12 @@ class SettingController extends Controller
             SchoolAddress::where('SchoolID', $schoolId)->update(['StreetLine' => $streetLines, 'City' => $city, 'StateOrProvinceCode' => $state, 'PostalCode' => $postalCode, 'PhoneNum' => $phoneNum]);
             $checkschool = School::whereNot('ID', $schoolId)->where('name', $schoolName)->first();
             if (isset($checkschool)) {
-                return Response::json(array('status' => "error",
-                            'msg' => 'School Name Already Exists.'
-                ));
+                return Response::json(
+                    array(
+                        'status' => "error",
+                        'msg' => 'School Name Already Exists.'
+                    )
+                );
             } else {
                 School::where('ID', $schoolId)->update(['name' => $schoolName]);
                 return Response::json(array('status' => "success"));
@@ -107,11 +114,12 @@ class SettingController extends Controller
         }     
     }
 
-    function GetAllNotifications($sid,$flag) {
-//           $flag=1 for admin side
-        $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID',$sid)->where('EventType',$flag)->get();
-        $getEvents = NotificationEvents::where('Type',$flag)->get();
-            foreach ($getEventsData as $data) {
+    function GetAllNotifications($sid, $flag)
+    {
+        //           $flag=1 for admin side
+        $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventType', $flag)->get();
+        $getEvents = NotificationEvents::where('Type', $flag)->get();
+        foreach ($getEventsData as $data) {
             $data->eventName = $data->event->Events;
             $data->schoolName = $data->school->name ?? null;
             $data->userName = $data->user->first_name . ' ' . $data->user->last_name;
@@ -129,17 +137,36 @@ class SettingController extends Controller
                     ];
                 })->values();
 
-        return response()->json(['msg' => $transformed,'events'=>$getEvents]);
-        
-        
+        return response()->json(['msg' => $transformed, 'events' => $getEvents]);
+
+
     }
-    
-    function GetEmailsbyId($sid, $id, $skey) {
-        $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventID', $id)->pluck('UserID');
-        $alluser = User::whereNotIn('id', $getEventsData)->where('school_id', $sid)->get();
+
+    function GetEmailsbyId($sid,$id,$skey)
+    {
+
+        if ($sid == 'null') {          
+            $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->whereNull('SchoolID')->where('EventID', $id)->pluck('UserID');
+            
+        } else {
+            $getEventsData = NotificationEventsLog::with('event', 'school', 'user')->where('SchoolID', $sid)->where('EventID', $id)->pluck('UserID');
+        }
+        
+        if($skey == 'null'){
+            $alluser = User::whereNotIn('id', $getEventsData)->where('school_id', $sid)->get();
+        }else{
+            $alluser = User::whereNotIn('id', $getEventsData)
+            ->where('school_id', $sid)
+            ->where('email', 'LIKE', '%' . $skey . '%')
+            ->get();
+        }
+        
         $selecteduser = User::whereIn('id', $getEventsData)->where('school_id', $sid)->get();
-        return Response::json(['alluser' => $alluser,
-                    'selected' => $selecteduser]) ?? null;
+    
+        return Response::json([
+            'alluser' => $alluser,
+            'selected' => $selecteduser
+        ]) ?? null;
     }
 
     function SaveEmails(Request $request)
@@ -171,11 +198,12 @@ class SettingController extends Controller
          return "success";
         
     } 
-     function deleteEmail($id, $flag)
-    {         
-       NotificationEventsLog::where('UserID',$id)->where('EventID',$flag)->forceDelete();       
-       return "success";
+
+    function deleteEmail($id, $flag)
+    {
+        NotificationEventsLog::where('UserID', $id)->where('EventID', $flag)->forceDelete();
+        return "success";
     }
-    
+
 
 }

@@ -406,7 +406,7 @@ class UtilizerController extends Controller {
 //
         $data_array = array();
         foreach ($utilizerData as $utilizerData) {
-            $utilizerLog = StudentInventory::where('School_ID', $sid)->where('Student_ID', $utilizerData->utilizerid)->get();
+            $utilizerLog = DeviceAllocationLog::where('School_ID', $sid)->where('Student_ID', $utilizerData->utilizerid)->get();
             $allocation_array = array();
             foreach ($utilizerLog as $utilizerLogData) {
                 $device = InventoryManagement::where('ID', $utilizerLogData->Inventory_ID)->first();

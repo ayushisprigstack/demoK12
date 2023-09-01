@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\Log;
 class AddTechnicianController extends Controller {
 
     function addUpdateK12User(Request $request) {
-        // try {
+        try {
             if ($request->input('id') !== 0) {
                 $k12userID = $request->input('id');
                 $userFirstName = $request->input('firstname');
@@ -148,11 +148,11 @@ class AddTechnicianController extends Controller {
                             'status' => "success",
                 ));
             }
-        // } catch (\Throwable $th) {
-        //     return Response::json(array(
-        //                 'status' => "Error",
-        //     ));
-        // }
+        } catch (\Throwable $th) {
+            return Response::json(array(
+                        'status' => "Error",
+            ));
+        }
     }
 
    function allK12User($skey, $sortbykey, $sortbyflag, $page, $limit)
