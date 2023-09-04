@@ -284,7 +284,7 @@ class ReportController extends Controller {
             $allstatuses->where('inventory_management.Building', $building);
             $allstatuses->whereNotNull('student_inventories.Student_ID');
         }
-//        $allstatuses->whereNotNull('student_inventories.Student_ID');
+
 
 
         $results = $allstatuses->get();

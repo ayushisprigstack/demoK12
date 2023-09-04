@@ -132,11 +132,7 @@ function adminDashboardData($startDate, $endDate, $lid, $sid) {
             $invoiceCount = InvoiceLog::where('School_Id', $schData->ID)->whereBetween('created_at', [$startDate, $endDate])->count();
             $totalamount = 0;
             foreach ($invoice as $invoicedata) {
-                $batchTicket = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->distinct()->pluck('Ticket_Id')->all();
-//                $batchTicketCount = count($batchTicket);
-//                $batchTicketCount = count($batchTicket);
-//                $batchTicketCount = count($batchTicket);
-//                $batchTicketCount = count($batchTicket);
+                $batchTicket = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->distinct()->pluck('Ticket_Id')->all();               
                 $batchData = CloseTicketBatchLog::where('Batch_Id', $invoicedata)->get();
                 foreach ($batchData as $batch) {
                     $totalamount += $batch->Batch_Sub_Total;

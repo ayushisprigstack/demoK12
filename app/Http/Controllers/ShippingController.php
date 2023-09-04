@@ -99,6 +99,9 @@ class ShippingController extends Controller {
             $data = $sflag == 'as' ? $data->sortBy('subtotal') : $data->sortByDesc('subtotal');
         } elseif ($skey == 5) {
             $data = $sflag == 'as' ? $data->sortBy('Status') : $data->sortByDesc('Status');
+        }else
+        {
+            $data = $sflag == 'as' ? $data->sortBy('ticket_num') : $data->sortByDesc('ticket_num');
         }
         $data->makeHidden(['inventoryManagement', 'user', 'ticketIssues', 'statusname', 'created_at', 'updated_at', 'ticket_status']);
 

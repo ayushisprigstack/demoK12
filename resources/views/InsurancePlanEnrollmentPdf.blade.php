@@ -36,7 +36,6 @@
     <p><strong>Student Name:</strong> {{ $enrollment->student->Device_user_first_name }} {{ $enrollment->student->Device_user_last_name }}</p>
     <p><strong>Email:</strong> {{ $customer->email }}</p>
     <p><strong>Invoice Number:</strong> {{ $customer->invoice_prefix }}</p>
-    <p><strong>Paid Amount:</strong> {{ $enrollment->PaidAmount}}</p>
     <p><strong>School Name:</strong> {{ $enrollment->plan->SchoolName }}</p> 
 </div>
 
@@ -55,6 +54,7 @@
     <p><strong>Card:</strong> {{ $paymentMethod->card->brand }}</p>
     <p><strong>Card Last Four Digits:</strong> {{ $paymentMethod->card->last4 }}</p>
     <p><strong>Expiry Date:</strong> {{ $paymentMethod->card->exp_month }}/{{ $paymentMethod->card->exp_year }}</p>
+    <p><strong>Paid Amount:</strong> ${{ $enrollment->PaidAmount}}</p>
 </div>
 
 </body>

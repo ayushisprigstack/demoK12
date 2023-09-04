@@ -15,7 +15,16 @@ class Student extends Model
     protected $table="students";
     
     protected $fillable = [
-        'stripeCustomerID'      
+    'Device_user_first_name',
+    'Device_user_last_name',
+    'Grade',
+    'Parent_guardian_name',
+    'Parent_phone_number',
+    'Parent_Guardian_Email',
+    'Parental_coverage',
+    'Student_num',
+    'stripeCustomerID',
+     'School_ID'      
     ];
     
     public function inventoryManagement() {

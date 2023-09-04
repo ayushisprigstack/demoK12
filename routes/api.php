@@ -47,7 +47,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-//Route::middleware(['uniquekey'])->group(function () {
+// Route::middleware(['uniquekey'])->group(function () {
 Route::get('/allMembers/{sid}&{uid}', [SettingController::class, 'allMembers']);
 Route::post('/addUsers', [LoginController::class, 'addUsers']);
 Route::post('/register', [LoginController::class, 'register']);
@@ -63,8 +63,9 @@ Route::post('/sameDomainSchoolContinueClick', [LoginController::class, 'sameDoma
 Route::post('/teststrip', [StripController::class, 'teststrip']);
 Route::get('/getstripedata/{custid}&{sid}&{pid}', [StripController::class, 'getstripedata']);
 Route::post('/purchasePlan', [AdminInsurancePlanController::class, 'purchasePlan']);
-Route::post('/AddUpdateInsurancePlan', [AdminInsurancePlanController::class, 'AddUpdateInsurancePlan']);
+
 Route::get('/getAllLivePlanBySchoolId/{sid}', [AdminInsurancePlanController::class, 'getAllLivePlanBySchoolId']);
+Route::post('/sameDomainSchoolConfirmClick', [LoginController::class, 'sameDomainSchoolConfirmClick']);
 //});
 
 //Route::middleware(['access.token'])->group(function () {
@@ -296,4 +297,5 @@ Route::post('/createToken', [StripController::class, 'createToken']);
 Route::get('/getServicesByPlanId/{pid}', [AdminInsurancePlanController::class, 'getServicesByPlanId']);
 Route::get('/parentalCoveragePurchased/{sid}&{skey}&{sortbykey}&{sortbyflag}', [AdminInsurancePlanController::class, 'parentalCoveragePurchased']);
 Route::post('/importMasterInventory', [MasterInventoryController::class, 'importMasterInventory']); 
-//});
+Route::post('/AddUpdateInsurancePlan', [AdminInsurancePlanController::class, 'AddUpdateInsurancePlan']);
+// });

@@ -116,19 +116,19 @@ class LoginController extends Controller {
                 if ($requstedEmailDomain == $dataEmailDomain && $data->Status == 'active') {
                     $status = 'true';
                 }
-            }
-        }
+            }    
         $userdata = User::with('school')->where('email', $email)->first();
-        if (isset($userdata)) {
+       
+        if (isset($userdata)) {           
             return Response::json(array(
                         'response' => 'Already register',
-                        'msg' => 'The email you are trying to Sign in with has already  added under the staffmembers of ' . $userdata->school->name . '',
+                        'msg' => 'The email you are trying to Sign in with has already  added under the staffmembers of ' .($userdata->school->name ?? 'k12 admin') .' ',
                         'status' => 'error',
             ));
         } else {
             if ($status == 'true') {
 
-                //now check user table 
+                //now check user table                 
                 $domainCheck = User::where('status', 'Approve')->where('email', 'LIKE', '%@' . $requstedEmailDomain)->first();
                 if (isset($domainCheck)) {
 
@@ -310,7 +310,7 @@ class LoginController extends Controller {
         $user->avtar = $avatar[0]->id;
         $user->save();
         $link = 'http://localhost:3000/';
-        $url = $link . 'confirmsignin' . '/' . $school->id;
+        $url = $link . 'confirm-school' . '/' . $school->id;
         $data = [
             'name' => $firstname . '' . $lastname,
             'school_name' => $schoolname,
@@ -356,7 +356,7 @@ class LoginController extends Controller {
     $menuArray = [];
     $submenuIDs = [];
     foreach ($menuAccess as $access) {
-        $submenuIds = preg_split('/,/', $access->SubMenuID, -1, PREG_SPLIT_NO_EMPTY);
+         $submenuIds = preg_split('/,/', $access->SubMenuID, -1, PREG_SPLIT_NO_EMPTY);
 
         foreach ($submenuIds as $submenuId) {
             $submenuIDs = array_merge($submenuIDs, explode(',', $submenuId));
