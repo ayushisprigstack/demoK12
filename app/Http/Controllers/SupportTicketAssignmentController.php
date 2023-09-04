@@ -37,6 +37,7 @@ class SupportTicketAssignmentController extends Controller
         // Assuming $page and $limit are passed as parameters
 
         $query = SupportTicketAssignment::with('building', 'assignTo.avtardata')
+        ->join('buildings', 'support_ticket_assignments.building_id', '=', 'buildings.id')
             ->where('school_id', $sid)
             ->when($skey != 'null', function ($query) use ($skey) {
                 $query->where(function ($query) use ($skey) {

@@ -134,77 +134,52 @@ class UtilizerController extends Controller {
 
     function importUtilizer(Request $request) {
         try {
-            $userId = $request->input('ID');
             $schId = $request->input('schId');
-            $result = $request->file('file');
-            $file = fopen($result, 'r');
+            $file = fopen($request->file('file'), 'r');
+            
             $header = fgetcsv($file);
-            $escapedheader = [];
-            foreach ($header as $key => $value) {
-                $lheader = strtolower($value);
-                $escapedItem = preg_replace('/[^a-z]/', '', $lheader);
-                array_push($escapedheader, $escapedItem);
-            }
+            $escapedHeader = array_map(function($value) {
+                return preg_replace('/[^a-z]/', '', strtolower($value));
+            }, $header);
+            
             while ($columns = fgetcsv($file)) {
+                if (empty($columns[0])) continue;
+    
+                $data = array_map('trim', array_combine($escapedHeader, $columns));
+    
+                $isParentCoverageYes = strcasecmp($data['parentalcoverage'], 'yes') == 0;
+    
+                $existingStudent = Student::where('Student_num', $data['studentnumber'])
+                                          ->where('School_ID', $schId)
+                                          ->first();
+    
+                
 
-                if ($columns[0] == "") {
-                    continue;
-                }
-
-                foreach ($columns as $key => &$value) {
-                    $value;
-                }
-
-                $data = array_combine($escapedheader, $columns);
-                $data = array_map('trim', $data);
-                $FirstName = $data['userfirstname'];
-                $LastName = $data['userlastname'];
-                $Grade = $data['grade'] != "" ? $data['grade'] : NULL;
-                $ParentName = $data['parentguardianname'];
-                $ParentEmail = $data['parentguardianemail'];
-                $ParentNum = $data['parentphonenumber'];
-                $ParentCoverage = $data['parentalcoverage'];
-                $StudentNum = $data['studentnumber'];
-
-//                $savedInventory = Student::where('Device_user_first_name',$FirstName)->where('Device_user_last_name',$LastName)->where('Parent_Guardian_Email',$ParentEmail)->where('school_id',$schId)->first(); 
-                $savedInventory = Student::where('Student_num', $StudentNum)->where('School_ID', $schId)->first();
-                if (isset($savedInventory)) {
-                    if ($ParentCoverage == 'Yes' || $ParentCoverage == 'YES' || $ParentCoverage == 'yes') {
-                        $FinalParentCoverage = 1;
-                    } else {
-                        $FinalParentCoverage = 0;
-                    }
-                    $updatedDetail = Student::where('School_ID', $schId)->where('Student_num', $savedInventory->Student_num)
-                            ->update(['Device_user_first_name' => $FirstName,
-                        'Device_user_last_name' => $LastName,
-                        'Grade' => $Grade,
-                        'Parent_guardian_name' => $ParentName,
-                        'Parent_phone_number' => $ParentNum,
-                        'Parent_Guardian_Email' => $ParentEmail,
-                        'Parental_coverage' => $FinalParentCoverage,
-                        'Student_num' => $StudentNum,
-                    ]);
+                $updateData = [
+                    'Device_user_first_name' => $data['userfirstname'] ?: $existingStudent->Device_user_first_name,
+                    'Device_user_last_name' => $data['userlastname'] ?: $existingStudent->Device_user_last_name,
+                    'Grade' => $data['grade'] ?: $existingStudent->Grade,
+                    'Parent_guardian_name' => $data['parentguardianname'] ?: $existingStudent->Parent_guardian_name,
+                    'Parent_phone_number' => $data['parentphonenumber'] ?: $existingStudent->Parent_phone_number,
+                    'Parent_Guardian_Email' => $data['parentguardianemail'] ?: $existingStudent->Parent_Guardian_Email,
+                    'Parental_coverage' => $isParentCoverageYes ? 1 : 0,
+                    'Student_num' => $data['studentnumber'],
+                ];
+          
+                if ($existingStudent) {  
+                    Student::where('Student_num', $data['studentnumber'])
+                    ->where('School_ID', $schId)->update(['Device_user_first_name' => $data['userfirstname'] ?: $existingStudent->Device_user_first_name,
+                    'Device_user_last_name' => $data['userlastname'] ?: $existingStudent->Device_user_last_name,
+                    'Grade' => $data['grade'] ?: $existingStudent->Grade,
+                    'Parent_guardian_name' => $data['parentguardianname'] ?: $existingStudent->Parent_guardian_name,
+                    'Parent_phone_number' => $data['parentphonenumber'] ?: $existingStudent->Parent_phone_number,
+                    'Parent_Guardian_Email' => $data['parentguardianemail'] ?: $existingStudent->Parent_Guardian_Email,
+                    'Parental_coverage' => $isParentCoverageYes ? 1 : 0,
+                    'Student_num' => $data['studentnumber']]);                   
                 } else {
-                    $Utilizer = new Student;
-                    $Utilizer->School_ID = $schId;
-                    $Utilizer->Device_user_first_name = $FirstName;
-                    $Utilizer->Device_user_last_name = $LastName;
-                    $Utilizer->Grade = $Grade;
-                    $Utilizer->Parent_guardian_name = $ParentName;
-                    $Utilizer->Parent_Guardian_Email = $ParentEmail;
-                    if ($ParentCoverage == 'Yes' || $ParentCoverage == 'YES' || $ParentCoverage == 'yes') {
-                        $Utilizer->Parental_coverage = 1;
-                    } else {
-                        $Utilizer->Parental_coverage = 0;
-                    }
-                    $Utilizer->Parent_phone_number = $ParentNum;
-                    $savedInventory = Student::where('School_ID', $schId)->where('Student_num', $StudentNum)->first();
-                    if (isset($savedInventory)) {
-                        Student::where('Student_num', $StudentNum)->update(['Device_user_first_name' => $FirstName, 'Device_user_last_name' => $LastName, 'Grade' => $Grade, 'Building' => $Building, 'Parent_guardian_name' => $ParentName, 'Parent_Guardian_Email' => $ParentEmail, 'Parent_phone_number' => $ParentNum, 'Parental_coverage' => $ParentCoverage, 'Student_num' => $StudentNum]);
-                    } else {
-                        $Utilizer->Student_num = $StudentNum;
-                        $Utilizer->save();
-                    }
+                    $newStudent = new Student($updateData);
+                    $newStudent->School_ID = $schId;
+                    $newStudent->save();
                 }
             }
             return "success";

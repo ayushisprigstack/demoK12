@@ -183,8 +183,8 @@ class AddTechnicianController extends Controller {
 
         }
         $k12users = $k12users->paginate($limit, ['*'], 'page', $page);
-        $accesses = Access::whereNotIn('ID', [1, 2, 3, 4, 7])->pluck('access_type', 'ID');
-        $Access = Access::whereNotIn('ID', [1, 2, 3, 4, 7])->get();
+        $accesses = Access::whereNotIn('ID', [1, 2, 3, 4, 7,10,11])->pluck('access_type', 'ID');
+        $Access = Access::whereNotIn('ID', [1, 2, 3, 4, 7,10,11])->get();
 
         foreach ($k12users as $user) {
             $user->accessname = $accesses[$user->access_type] ?? null;

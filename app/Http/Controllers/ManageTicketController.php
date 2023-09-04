@@ -561,6 +561,7 @@ class ManageTicketController extends Controller {
                 $partsdata = PartSKUs::where('ID', $data['PartID'])->first();
                 $quantity = $partsdata->Quantity - 1;
                 PartSKUs::where('ID', $data['PartID'])->update(['Quantity' => $quantity]);
+                if($quantity < $partsdata->Reminder_Quantity){
                 //mail send 
                 $schoolname = School::where('ID', $schoolId)->select('name')->first();
                 $ccRecipients = NotificationEventsLog::where('EventID',2)->pluck('UserID')->all();              
@@ -577,6 +578,8 @@ class ManageTicketController extends Controller {
                         Log::error("Mail sending failed: " . $e->getMessage());
                     }
                 }
+                }
+
             }
         }
         //end   
