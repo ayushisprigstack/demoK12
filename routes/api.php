@@ -46,7 +46,7 @@ use App\Http\Controllers\StripController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-
+//git testing
 // Route::middleware(['uniquekey'])->group(function () {
 Route::get('/allMembers/{sid}&{uid}', [SettingController::class, 'allMembers']);
 Route::post('/addUsers', [LoginController::class, 'addUsers']);
