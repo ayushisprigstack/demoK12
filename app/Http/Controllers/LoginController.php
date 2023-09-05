@@ -44,7 +44,7 @@ class LoginController extends Controller {
         $checkDomain = Domain::where('Name', $requstedEmailDomain)->first();
         $checkusersavedemail = User::where('email', $request->input('email'))->first();
         if (isset($checkusersavedemail->copy_access_type)) {
-            User::where('email', $request->input('email'))->update(['access_type' => $checkusersavedemail->copy_access_type, 'copy_access_type' => $checkusersavedemail->NULL]);
+            User::where('email', $request->input('email'))->update(['access_type' => $checkusersavedemail->copy_access_type, 'copy_access_type' => $checkusersavedemail->NULL,'school_id'=> 0]);
         }
 
         if ($checkDomain->Status == 'active') {
@@ -309,7 +309,7 @@ class LoginController extends Controller {
         $avatar = Avtar::find($avatarId);
         $user->avtar = $avatar[0]->id;
         $user->save();
-        $link = 'http://localhost:3000/';
+        $link = 'https://rocket.k12techrepairs.com/';
         $url = $link . 'confirm-school' . '/' . $school->id;
         $data = [
             'name' => $firstname . '' . $lastname,

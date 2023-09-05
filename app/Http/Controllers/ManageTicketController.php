@@ -202,7 +202,7 @@ class ManageTicketController extends Controller {
         if ($flag == 1) {
             $status = TicketStatus::whereNotIn('ID', [9, 10])->get();
         } elseif ($flag == 2) {
-            $status = TicketStatus::whereIn('ID', [2, 7, 8])->get();
+            $status = TicketStatus::whereIn('ID', [2, 7, 8, 1])->get();
         } elseif ($flag == 3) {
             $status = TicketStatus::whereIn('ID', [9, 10])->get();
         } else {
@@ -214,7 +214,7 @@ class ManageTicketController extends Controller {
 
     function searchInventoryCT($sid, $key) {
         $decommissiondevice = InventoryManagement::where('inventory_status', 2)->where('school_id', $sid)->pluck('ID')->all();
-        $createdtickets = Ticket::where('school_id', $sid)->pluck('inventory_id')->all();
+        $createdtickets = Ticket::where('school_id', $sid)->whereIn('ticket_status',[2,7,8])->pluck('inventory_id')->all();
         $excludedIDs = array_merge($decommissiondevice, $createdtickets);
         if ($key != 'null') {
             $get = InventoryManagement::leftJoin('student_inventories', 'student_inventories.Inventory_ID', '=', 'inventory_management.ID')
@@ -478,14 +478,16 @@ class ManageTicketController extends Controller {
         $ticketId = $request->input('TicketID');
         $repairedItem = $request->input('RepairedItem');
         $RepairFinished = $request->input('RepairFinished');
+        $markAsClosed = $request->input('MarkAsCloseflag');
         $partsNotes = $request->input('PartNotes');
         $attchPartData = $request->input('Part');
         $damageType = $request->input('DamageType');
         $flag = $request->input('Flag');
         $deviceType =  $request->input('DeviceType');
         $loginUserId = $request->input('LoginUserID');
-        if ($RepairFinished == 1) {
-            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();
+       
+        if ($RepairFinished == 1) {   
+            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();         
             $statusFrom = $ticketData->ticket_status;
             $statusTo = 9;
             $ticketlog = new TicketStatusLog();
@@ -542,6 +544,7 @@ class ManageTicketController extends Controller {
                 $ticketAttachment->Parts_Notes = $data['Notes'];
                 $ticketAttachment->Quantity = 1;
                 $ticketAttachment->Original_Price = $partsdata->Variant_Price;
+                $ticketAttachment->User_ID =  $loginUserId;
                 $ticketAttachment->Parts_Flag = $data['PartFlag']; //1 for master         
                 $ticketAttachment->save();
             }
@@ -582,6 +585,18 @@ class ManageTicketController extends Controller {
 
             }
         }
+        //if mark is closed only ticket status change and status log entry
+        if($markAsClosed == 1){
+            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();
+            $ticketlog = new TicketStatusLog();
+            $ticketlog->Ticket_id = $ticketId;           
+            $ticketlog->Status_from = $ticketData->ticket_status;
+            $ticketlog->Status_to = 2;
+            $ticketlog->updated_by_user_id = $loginUserId;                     
+            $ticketlog->School_id = $schoolId;
+            $ticketlog->save();
+            Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->update(['ticket_status' => 2]);
+        }
         //end   
         //repair tech data     
         $checkData = TicketRepairLog::where('Ticket_Id', $ticketId)->first();
@@ -593,6 +608,7 @@ class ManageTicketController extends Controller {
             }
             
         } else {
+            
             $TicketRepairLog = new TicketRepairLog();
             $TicketRepairLog->School_Id = $schoolId;
             $TicketRepairLog->Ticket_Id = $ticketId;
@@ -803,6 +819,7 @@ class ManageTicketController extends Controller {
 
         $data->ticket_attachments = $data->ticketAttachments->map(function ($ticketAttachment) {
             $ticketAttachment->part_name = $ticketAttachment->part->Title ?? null;
+            $ticketAttachment->user_name = $ticketAttachment->user->first_name .' '. $ticketAttachment->user->last_name ?? null;
             $ticketAttachment->makeHidden(['part', 'created_at', 'updated_at', 'deleted_at', 'Ticket_ID', 'ID', 'Admin_Price']);
             return $ticketAttachment;
         });

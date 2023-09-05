@@ -44,7 +44,7 @@ body {  }
    <div id='lower-side'>   
         <h3 id="message" style="margin-top: 10px;text-align:left;">Hey {{$name}},</h3>
         <p id='message' style="text-align: left">New Support Ticket Created By {{$createdBy}}</p>
-        <p id='message' style="text-align: left">You can also access your support tickets and manage them through our <a href="https://k12techfrontend.azurewebsites.net/">Support Tickets menu</a>.</P>            
+        <p id='message' style="text-align: left">You can also access your support tickets and manage them through our <a href="https://rocket.k12techrepairs.com/">Support Tickets menu</a>.</P>            
         <div id='text' style="margin-top:10px;">            
             <p style="margin-bottom:0px;"> Thanks!</p>  
             <p style="margin-bottom:0px;"> {{$SchoolName}}</p>

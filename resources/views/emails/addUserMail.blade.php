@@ -46,7 +46,7 @@ body {  }
     </div> 
     <div id='lower-side'>        
         <p id='message' style="text-align: left">Congratulations, You were added as a Staff member by {{$school_name}}  with the access role of {{$access_type}}.</p>
-        <p>Kindly check and login with {{$email}} to proceed on <a href="https://k12techfrontend.azurewebsites.net">K12 Tech</a>
+        <p>Kindly check and login with {{$email}} to proceed on <a href="https://rocket.k12techrepairs.com/">K12 Tech</a>
         </p>
       
         <div id='text' style="margin-top:50px;">

@@ -38,11 +38,11 @@ class SupportTicketController extends Controller
     {
         $getUser = User::where('id', $uid)->first();
         $get = SupportTicket::with('user')
-                ->where('Type', $flag)
-                ->where('SchoolId', $sid)
-                ->when($getUser->access_type != 1, function ($query) use ($uid) {
-            $query->where('AssignedTo', $uid);
-        });
+            ->where('Type', $flag)
+            ->where('SchoolId', $sid)
+            ->when($getUser->access_type != 1, function ($query) use ($uid) {
+                $query->where('AssignedTo', $uid);
+            });
 
         $openTicketsQuery = SupportTicket::with('user')
             ->where('Type', $flag)
@@ -126,7 +126,7 @@ class SupportTicketController extends Controller
             $supportTicketData = SupportTicket::where('ID', $request->input('TicketId'))->first();
             $school = School::where('ID', $supportTicketData->SchoolId)->first();
 
-            $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
+            $frontendUrl = 'https://rocket.k12techrepairs.com/';
             $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportTicketData->SupportTicketNum;
             $data = [
                 'ticketNum' => $supportTicketData->SupportTicketNum,
@@ -173,20 +173,20 @@ class SupportTicketController extends Controller
             $supportComment->save();
 
             if ($Document !== null) {
-            $imageData = base64_decode($Document);
-                $filename = time() . '_' . rand(1000, 9999) . '.jpg';  // Example: 1629134523_1234.jpg
+                $imageData = base64_decode($Document);
+                $filename = time() . '_' . rand(1000, 9999) . '.jpg'; // Example: 1629134523_1234.jpg
                 $filePath = 'SupportTickets/' . $supportComment->id . '/' . $filename; // Store with the random filename
                 Storage::disk('public')->put($filePath, $imageData);
                 SupportTicketComments::where('ID', $supportComment->id)->update(['Img' => $filePath]);
-                
+
             }
-      
+
             //send mail
             //school admin 
-           
+
             $School = School::where('ID', $SchoolId)->first();
-            $userdata = User::where('school_id',$SchoolId)->where('access_type', 1)->first();
-            $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
+            $userdata = User::where('school_id', $SchoolId)->where('access_type', 1)->first();
+            $frontendUrl = 'https://rocket.k12techrepairs.com/';
             $link = $frontendUrl . '/ticket/' . $School->schoolNumber . '/' . $ticket->SupportTicketNum . '/' . $ticket->TicketGuID;
             $linkWithoutGUID = $frontendUrl . '/ticket/' . $School->schoolNumber . '/' . $ticket->SupportTicketNum;
             if ($ByWhom == 2) //3rd person
@@ -196,9 +196,9 @@ class SupportTicketController extends Controller
                     'ticketNum' => $ticket->Title,
                     'comment' => $Comment,
                     'link' => $link,
-                    'linkWithoutGUID'=> $linkWithoutGUID,
+                    'linkWithoutGUID' => $linkWithoutGUID,
                     'schoolName' => $School->name,
-                    'name'=>$userdata->first_name . ' ' . $userdata->last_name,
+                    'name' => $userdata->first_name . ' ' . $userdata->last_name,
                 ];
                 //                Mail::to($ticket->Email)->send(new SupportTicketNewCommentAddMailer($data, 'emails.SupportTicketNewCommentAdd'));
 
@@ -249,7 +249,9 @@ class SupportTicketController extends Controller
             }
 
             $ticket->IssueType = $issueType;
-            $ticket->BuildingName = $ticket->building->Building ?? null;
+            $buildingIds = explode(',', $ticket->Building);
+            $buildingNames = Building::whereIn('id', $buildingIds)->pluck('Building')->all();
+            $ticket->BuildingName = implode(', ', $buildingNames);
             $ticket->makeHidden(['building', 'technology', 'maintenance', 'user', 'updated_at', 'created_at', 'deleted_at']);
         }
 
@@ -312,18 +314,9 @@ class SupportTicketController extends Controller
         $supportTicket->Title = $request->input('Title');
         $supportTicket->Discription = $request->input('Description');
         $supportTicket->Name = $request->input('Name');
-        $supportTicket->Email = $request->input('Email');        
-        if ($request->input('Building') == 0) {
-            $addBuilding = new Building;
-            $addBuilding->Building = $request->input('BuildingName');
-            $addBuilding->SchoolID = $request->input('SchoolID');
-            $addBuilding->save();
-            $supportTicket->Building = $addBuilding->id;
-        } elseif ($request->input('Building') == 'null') {
-            $supportTicket->Building = NULL;
-        } else {
-            $supportTicket->Building = $request->input('Building');
-        }
+        $supportTicket->Email = $request->input('Email');
+        $buildingValues = explode(',', $request->input('Building'));
+        $buildingIds = [];
         $supportTicket->RoomNo = $request->input('RoomNo');
         $supportTicket->Status = 'Open';
         $supportTicket->SchoolId = $request->input('SchoolID');
@@ -337,72 +330,105 @@ class SupportTicketController extends Controller
         $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
         $response = $request->input('Captcha');
         $resp = $recaptcha->verify($response, $_SERVER['REMOTE_ADDR']);
-        if ($resp->isSuccess()) {
-            $supportTicket->save();
-            $base64Image = $request->input('Document');
+        // if ($resp->isSuccess()) {
+        foreach ($buildingValues as $buildingValue) {
+            $buildingValue = is_numeric($buildingValue) ? (int) $buildingValue : $buildingValue;
 
-            if ($base64Image !== null) {
-                $imageData = base64_decode($base64Image);
-                $filePath = 'SupportTickets/' . $supportTicket->id . '/img.jpg';
-                Storage::disk('public')->put($filePath, $imageData);
-                SupportTicket::where('ID', $supportTicket->id)->update(['Img' => $filePath]);
-            }
-            //  AssignedTo
-            $school = School::where('ID', $request->input('SchoolID'))->first();
-            $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
-            $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportTicket->SupportTicketNum;
-            $checkTicketAssignment = SupportTicketAssignment::where('building_id', $supportTicket->Building)->where('category_id', $request->input('TypeFlag'))->where('school_id', $request->input('SchoolID'))->whereNotNull('staffmember_id')->first();
-            if (isset($checkTicketAssignment)) {
-                $user = User::where('id', $checkTicketAssignment->staffmember_id)->first();
-                $data = [
-                    'SchoolName' => $school->name,
-                    'Name' => $user->first_name . ' ' . $user->last_name,
-                    'TicketNum' => $supportTicket->SupportTicketNum,
-                    'Title' => $supportTicket->Title,
-                    'CreatedBy' => $supportTicket->Name,
-                    'Discription' => $supportTicket->Discription,
-                    'Link' => $link
-                ];
-                SupportTicket::where('ID', $supportTicket->id)->update(['AssignedTo' => $checkTicketAssignment->staffmember_id]);
-
-                try {
-                    Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
-                    Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
-                } catch (\Exception $e) {
-                    Log::error("Mail sending failed: " . $e->getMessage());
-                }
+            if ($buildingValue === 0) {
+                $addBuilding = new Building;
+                $addBuilding->Building = $request->input('BuildingName');
+                $addBuilding->SchoolID = $request->input('SchoolID');
+                $addBuilding->save();
+                $buildingIds[] = $addBuilding->id;
+            } elseif ($buildingValue === 'null' || $buildingValue === NULL) {
+                // $supportTicket->Building = NULL;
             } else {
-                $user = User::where('school_id', $request->input('SchoolID'))->where('access_type', 1)->first();
-                $data = [
-                    'SchoolName' => $school->name,
-                    'Name' => $user->first_name . ' ' . $user->last_name,
-                    'CreatedBy' => $request->input('Name'),
-                    'Title' => $request->input('Title'),
-                    'Link' => $link
-                ];
-
-                try {
-                    Mail::to($user->email)->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreatedForSchool'));
-                    Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
-                } catch (\Exception $e) {
-                    Log::error("Mail sending failed: " . $e->getMessage());
-                }
+                $buildingIds[] = $buildingValue;
             }
-
-            return Response::json(
-                array(
-                    'status' => "success",
-                    'SupportTicketDetails' => $supportTicket,
-                )
-            );
-        } else {
-            return Response::json(
-                array(
-                    'status' => "error",
-                    'SupportTicketDetails' => $supportTicket,
-                )
-            );
         }
+        $supportTicket->Building = implode(',', $buildingIds);
+        $supportTicket->save();
+        //img save
+
+        $imageFile = $request->file('Document');
+        if ($imageFile !== null && $imageFile->isValid()) {
+            $filePath = 'SupportTickets/' . $supportTicket->id . '/img.jpg';
+            Storage::disk('public')->put($filePath, file_get_contents($imageFile->getRealPath()));
+            SupportTicket::where('ID', $supportTicket->id)->update(['Img' => $filePath]);
+        }
+
+        //video save
+        try {
+            $videos = $request->file('videos');
+            if (isset($videos) && $videos->isValid()) {
+                $videoName = uniqid() . '.' . $videos->getClientOriginalExtension();
+
+                // Save the video in the same folder as the image
+                $videoPath = 'SupportTickets/' . $supportTicket->id . '/' . $videoName;
+
+                Storage::disk('public')->putFileAs('SupportTickets/' . $supportTicket->id, $videos, $videoName);
+                SupportTicket::where('ID', $supportTicket->id)->update(['videoPath' => $videoPath]);
+            }
+        } catch (Exception $e) {
+            return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
+        }
+
+        //  AssignedTo
+        $school = School::where('ID', $request->input('SchoolID'))->first();
+        $frontendUrl = 'https://rocket.k12techrepairs.com';
+        $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportTicket->SupportTicketNum;
+        $checkTicketAssignment = SupportTicketAssignment::where('building_id', $supportTicket->Building)->where('category_id', $request->input('TypeFlag'))->where('school_id', $request->input('SchoolID'))->whereNotNull('staffmember_id')->first();
+        if (isset($checkTicketAssignment)) {
+            $user = User::where('id', $checkTicketAssignment->staffmember_id)->first();
+            $data = [
+                'SchoolName' => $school->name,
+                'Name' => $user->first_name . ' ' . $user->last_name,
+                'TicketNum' => $supportTicket->SupportTicketNum,
+                'Title' => $supportTicket->Title,
+                'CreatedBy' => $supportTicket->Name,
+                'Discription' => $supportTicket->Discription,
+                'Link' => $link
+            ];
+            SupportTicket::where('ID', $supportTicket->id)->update(['AssignedTo' => $checkTicketAssignment->staffmember_id]);
+
+            try {
+                Mail::to($user->email)->send(new SupportTicketAssignMailer($data));
+                Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
+            }
+        } else {
+            $user = User::where('school_id', $request->input('SchoolID'))->where('access_type', 1)->first();
+            $data = [
+                'SchoolName' => $school->name,
+                'Name' => $user->first_name . ' ' . $user->last_name,
+                'CreatedBy' => $request->input('Name'),
+                'Title' => $request->input('Title'),
+                'Link' => $link
+            ];
+
+            try {
+                Mail::to($user->email)->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreatedForSchool'));
+                Mail::to($request->input('Email'))->send(new SupportTicketCreatedMailer($data, 'emails.SupportTicketCreated'));
+            } catch (\Exception $e) {
+                Log::error("Mail sending failed: " . $e->getMessage());
+            }
+        }
+
+        return Response::json(
+            array(
+                'status' => "success",
+                'SupportTicketDetails' => $supportTicket,
+            )
+        );
+        // } else {
+        //     return Response::json(
+        //         array(
+        //             'status' => "error",
+        //             'SupportTicketDetails' => $supportTicket,
+        //         )
+        //     );
+        // }
     }
 
     function assignSupportTicketTOStaffmember(Request $request)
@@ -413,7 +439,7 @@ class SupportTicketController extends Controller
         $user = User::where('id', $staffmemberID)->first();
         $school = School::where('ID', $schoolID)->first();
         $supportticket = SupportTicket::where('ID', $ticketID)->first();
-        $frontendUrl = 'https://k12techfrontend.azurewebsites.net';
+        $frontendUrl = 'https://rocket.k12techrepairs.com/';
         $link = $frontendUrl . '/ticket/' . $school->schoolNumber . '/' . $supportticket->SupportTicketNum;
         $data = [
             'SchoolName' => $school->name,
