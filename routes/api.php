@@ -106,7 +106,6 @@ Route::get('/closedTicketsPdf/{sid}',[ManageTicketController::class,'closedTicke
 Route::post('/editTicketData', [ManageTicketController::class, 'editTicketData']);
 Route::get('/TicketData/{tid}&{iid}',[ManageTicketController::class,'TicketData']);
 Route::post('/RepairTagPopUpData', [ManageTicketController::class, 'RepairTagPopUpData']);
-//Route::get('/Tickets/{sid?}{gflag}&{key}&{flag}&{skey}&{sflag}&{tflag}',[ManageTicketController::class, 'Tickets']);
 Route::get('/getTicketDataById/{tid}',[ManageTicketController::class, 'getTicketDataById']);
 Route::get('/exportTickets/{sid}',[TicketController::class, 'exportTickets']);
 //user
