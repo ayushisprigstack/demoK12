@@ -44,7 +44,7 @@ class LoginController extends Controller {
         $checkDomain = Domain::where('Name', $requstedEmailDomain)->first();
         $checkusersavedemail = User::where('email', $request->input('email'))->first();
         if (isset($checkusersavedemail->copy_access_type)) {
-            User::where('email', $request->input('email'))->update(['access_type' => $checkusersavedemail->copy_access_type, 'copy_access_type' => $checkusersavedemail->NULL]);
+            User::where('email', $request->input('email'))->update(['access_type' => $checkusersavedemail->copy_access_type, 'copy_access_type' => $checkusersavedemail->NULL,'school_id'=> 0]);
         }
 
         if ($checkDomain->Status == 'active') {
@@ -310,7 +310,7 @@ class LoginController extends Controller {
         $avatar = Avtar::find($avatarId);
         $user->avtar = $avatar[0]->id;
         $user->save();
-        $link = 'http://localhost:3000/';
+        $link = 'https://rocket.k12techrepairs.com/';
         $url = $link . 'confirm-school' . '/' . $school->id;
         $data = [
             'name' => $firstname . '' . $lastname,
@@ -343,6 +343,13 @@ class LoginController extends Controller {
        function menuAccess($uid)
 {
     $userType = User::with('school')->where('id', $uid)->first();
+    $masterInventoryFlag = 0;
+    if(isset($userType->school->MasterInventory)){
+        if($userType->school->MasterInventory == 1){
+            $masterInventoryFlag = 1;
+       }
+    }
+    
     $userType->schoolNum = $userType->school->schoolNumber ?? null;
         $menuAccess = MenuAccess::where('Access_type', $userType->access_type)
                 ->where('Status', 'Active')
@@ -350,7 +357,7 @@ class LoginController extends Controller {
                 ->get();
 
 
-        $menuID = $menuAccess->pluck('Menu')->all();
+    $menuID = $menuAccess->pluck('Menu')->all();
     $flag = ($userType->access_type == 5) ? 1 : 0;
     $menuData = Menu::whereIn('ID', $menuID)->get();
 
@@ -394,14 +401,15 @@ class LoginController extends Controller {
             }
         }
     }
- usort($menuArray, function ($a, $b) {
+    usort($menuArray, function ($a, $b) {
         return $a['MenuOrderID'] - $b['MenuOrderID'];
     });
     return response()->json([
         'status' => 'success',
         'msg' => $menuArray,
         'flag' => $flag,
-        'user' => $userType
+        'user' => $userType,
+        'inventoryflag'=>$masterInventoryFlag
     ]);
 }
 

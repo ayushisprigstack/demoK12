@@ -214,7 +214,7 @@ class ManageTicketController extends Controller {
 
     function searchInventoryCT($sid, $key) {
         $decommissiondevice = InventoryManagement::where('inventory_status', 2)->where('school_id', $sid)->pluck('ID')->all();
-        $createdtickets = Ticket::where('school_id', $sid)->pluck('inventory_id')->all();
+        $createdtickets = Ticket::where('school_id', $sid)->whereIn('ticket_status',[2,7,8])->pluck('inventory_id')->all();
         $excludedIDs = array_merge($decommissiondevice, $createdtickets);
         if ($key != 'null') {
             $get = InventoryManagement::leftJoin('student_inventories', 'student_inventories.Inventory_ID', '=', 'inventory_management.ID')
@@ -405,7 +405,7 @@ class ManageTicketController extends Controller {
                 $file = $img['Img'];
                 $name = $count . 'img_' . time();
                 $filePath = 'Tickets/' . $request->input('TicketId') . '/' . $name;
-                Storage::disk('s3')->put($filePath, file_get_contents($file));
+                Storage::disk('public')->put($filePath, file_get_contents($file));
 
                 $TicketImg = new TicketImage();
                 $TicketImg->Ticket_ID = $request->input('TicketId');
@@ -484,8 +484,9 @@ class ManageTicketController extends Controller {
         $flag = $request->input('Flag');
         $deviceType =  $request->input('DeviceType');
         $loginUserId = $request->input('LoginUserID');
-        if ($RepairFinished == 1) {
-            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();
+       
+        if ($RepairFinished == 1) {   
+            $ticketData = Ticket::where('school_id', $schoolId)->where('ID', $ticketId)->first();         
             $statusFrom = $ticketData->ticket_status;
             $statusTo = 9;
             $ticketlog = new TicketStatusLog();

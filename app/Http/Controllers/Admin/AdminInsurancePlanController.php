@@ -32,7 +32,7 @@ use PDF;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\SchoolSideParentalCoverageMailer;
-use App\Mail\adminSetPricingForInsurancePlanMailer;
+use App\Mail\AdminSetPricingForInsurancePlanMailer;
 use App\Mail\ContactUsMailer;
 use App\Mail\InsurancePlanNegotiationMailer;
 use App\Models\InvoiceLog;
@@ -294,7 +294,7 @@ class AdminInsurancePlanController extends Controller
                 'plancreateddate' => $plan->created_at->format('m-d-y'),
             ];
             try {
-                Mail::to($staffmember->email)->send(new adminSetPricingForInsurancePlanMailer($data));
+                Mail::to($staffmember->email)->send(new AdminSetPricingForInsurancePlanMailer($data));
             } catch (\Exception $e) {
                 Log::error("Mail sending failed: " . $e->getMessage());
             }
@@ -583,7 +583,8 @@ class AdminInsurancePlanController extends Controller
 
     function parentalCoveragePurchased($sid, $skey, $sortbykey, $sortbyflag)
     {
-        $get = InsurancePlanEnrollment::with('student', 'plan')->where('SchoolID', $sid);
+        $get = InsurancePlanEnrollment::with('student', 'plan')->where('insurance_plan_enrollments.SchoolID', $sid);
+
         $coverdPlan = array();
         $uncoverdPlan = array();
 
@@ -602,39 +603,23 @@ class AdminInsurancePlanController extends Controller
         });
     }
 
-        if ($sortbykey == 1) {
-            if ($sortbyflag == 'asc') {
-                $get = $get->orderBy('insurance_plans.PlanName', 'asc');
-            } else {
-                $get = $get->orderBy('insurance_plans.PlanName', 'desc');
-            }
-        } elseif ($sortbykey == 2) {
-            if ($sortbyflag == 'asc') {
-                $get = $get->orderBy('student.Student_num', 'asc');
-            } else {
-                $get = $get->orderBy('student.Student_num', 'desc');
-            }
-        } elseif ($sortbykey == 3) {
-            if ($sortbyflag == 'asc') {
-                $get = $get->orderBy('StripCustomerID', 'asc');
-            } else {
-                $get = $get->orderBy('StripCustomerID', 'desc');
-            }
-        } elseif ($sortbykey == 4) {
-            if ($sortbyflag == 'asc') {
-                $get = $get->orderBy('PaidAmount', 'asc');
-            } else {
-                $get = $get->orderBy('PaidAmount', 'desc');
-            }
-        } elseif ($sortbykey == 5) {
-            if ($sortbyflag == 'asc') {
-                $get = $get->orderBy('created_at', 'asc');
-            } else {
-                $get = $get->orderBy('created_at', 'desc');
-            }
-        } else {
-            $get = $get->orderBy('ID', 'desc');
-        }
+    if ($sortbykey == 1) {
+        $get = $get->join('insurance_plans', 'insurance_plan_enrollments.PlanID', '=', 'insurance_plans.ID')
+                   ->orderBy('insurance_plans.PlanName', $sortbyflag);
+    } elseif ($sortbykey == 2) {
+        $get = $get->join('students', 'insurance_plan_enrollments.StudentID', '=', 'students.ID')
+                   ->orderBy('students.Student_num', $sortbyflag);
+    } elseif ($sortbykey == 3) {
+        $get = $get->orderBy('StripCustomerID', $sortbyflag);
+    } elseif ($sortbykey == 4) {
+        $get = $get->orderBy('PaidAmount', $sortbyflag);
+    } elseif ($sortbykey == 5) {
+        $get = $get->orderBy('created_at', $sortbyflag);
+    } else {
+        $get = $get->join('insurance_plans', 'insurance_plan_enrollments.PlanID', '=', 'insurance_plans.ID')
+                   ->orderBy('insurance_plans.PlanName', 'asc');
+    }
+
         $results = $get->get();
         foreach($results as $data)
         {

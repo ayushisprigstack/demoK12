@@ -475,7 +475,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
         return "success";
     }
 
-     function allInventories($sid, $flag, $key, $skey, $sflag,$page,$limit) {
+     function allInventories($sid, $flag, $key, $skey, $sflag,$page,$limit) {        
         $inventory = InventoryManagement::leftJoin('student_inventories', 'student_inventories.Inventory_ID', '=', 'inventory_management.ID')
                 ->leftJoin('students', 'students.ID', '=', 'student_inventories.Student_ID')
                 ->leftJoin('buildings','buildings.ID','=','inventory_management.Building')
@@ -545,8 +545,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
             $sflag == 'as' ? $inventory->orderBy("inventory_management.Purchase_date", "asc") : $inventory->orderBy("inventory_management.Purchase_date", "desc");
         }else {
         $inventory->orderByDesc('inventory_management.ID');
-    }
-     $data = $inventory->get();
+    }   
      $data = $inventory->paginate($limit, ['*'], 'page',$page);
         return response()->json(
                         collect([
@@ -812,9 +811,7 @@ $savedInventory = InventoryManagement::where('Serial_number', $data['serialnumbe
                 $ticketHistory->makeHidden(['created_at', 'updated_at', 'deleted_at']);
             })->toArray();
             
-        });
-//        $deviceData = DeviceType::find($inventory->Device_type);
-        $inventory->device_name = $deviceData->type ?? null;
+        });//    
         $inventory->student = $inventory->studentInventory->student ?? null;
         $inventory->makeHidden(['created_at', 'updated_at', 'studentInventory', 'ticket_issues', 'statusname']);
         return $inventory;

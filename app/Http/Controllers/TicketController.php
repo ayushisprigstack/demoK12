@@ -155,7 +155,7 @@ class TicketController extends Controller {
                         }
                     }
                 } else {
-                    return "Ticket already generated";
+                    return "Close old ticket to open new ticket";
                 }
             } else {
                 $randomString = Str::random(6, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');

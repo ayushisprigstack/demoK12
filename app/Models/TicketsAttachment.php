@@ -27,4 +27,8 @@ class TicketsAttachment extends Model {
         return $this->belongsTo(Ticket::class, 'Ticket_ID', 'ID');
     }
 
+    public function user() {
+        return $this->belongsTo(User::class, 'User_ID', 'id');
+    }
+
 }

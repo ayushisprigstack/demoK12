@@ -200,7 +200,7 @@ class UtilizerController extends Controller {
                     $Utilizer->Parent_phone_number = $ParentNum;
                     $savedInventory = Student::where('School_ID', $schId)->where('Student_num', $StudentNum)->first();
                     if (isset($savedInventory)) {
-                        Student::where('Student_num', $StudentNum)->update(['Device_user_first_name' => $FirstName, 'Device_user_last_name' => $LastName, 'Grade' => $Grade, 'Building' => $Building, 'Parent_guardian_name' => $ParentName, 'Parent_Guardian_Email' => $ParentEmail, 'Parent_phone_number' => $ParentNum, 'Parental_coverage' => $ParentCoverage, 'Student_num' => $StudentNum]);
+                        Student::where('Student_num', $StudentNum)->update(['Device_user_first_name' => $FirstName, 'Device_user_last_name' => $LastName, 'Grade' => $Grade,  'Parent_guardian_name' => $ParentName, 'Parent_Guardian_Email' => $ParentEmail, 'Parent_phone_number' => $ParentNum, 'Parental_coverage' => $ParentCoverage, 'Student_num' => $StudentNum]);
                     } else {
                         $Utilizer->Student_num = $StudentNum;
                         $Utilizer->save();

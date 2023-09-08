@@ -33,8 +33,7 @@ class AllocationController extends Controller {
 
    public function allActiveDevice($sid, $skey) {
         $allocatedDevice = StudentInventory::where('School_ID', $sid)->whereNotNull('Inventory_ID')->pluck('Inventory_ID')->all();
-        $query = InventoryManagement::whereNotIn('inventory_status', [2])
-                ->whereNotIn('ID', $allocatedDevice)
+        $query = InventoryManagement::whereNotIn('inventory_status', [2])                
                 ->where('school_id', $sid)
                 ->select('ID', 'Device_model', 'Asset_tag', 'Serial_number');
 
@@ -48,7 +47,12 @@ class AllocationController extends Controller {
         }
 
         $devices = $query->get();
-
+        foreach ($devices as $device) {
+            if (in_array($device->ID, $allocatedDevice)) {
+                $device->flag = 'assigned';
+            }
+        }
+    
         return response()->json([
                     'response' => 'success',
                     'msg' => $devices,
@@ -126,25 +130,36 @@ class AllocationController extends Controller {
         $schoolID = $request->input('Schoolid');
         $idArray = $request->input('DeviceArray');
         $flag =  $request->input('Flag');
+        $assignedFlag = $request->input('AssignedFlag');
         foreach($idArray as $data){
-            if($flag == 1){          
-            $studentInventory = new StudentInventory();
-            $studentInventory->Inventory_ID = $data['deviceid'];
-            $studentInventory->School_ID = $schoolID;
-            $studentInventory->Student_ID =$data['userid'];
-            $studentInventory->save();
-
-            $deviceAllocationLog = new DeviceAllocationLog;
-            $deviceAllocationLog->Inventory_ID = $data['deviceid'];
-            $deviceAllocationLog->Student_ID = $data['userid'];
-            $deviceAllocationLog->School_ID = $schoolID;
-            $deviceAllocationLog->Allocated_Date = date("Y-m-d");
-            $checkLonerdevice = InventoryManagement::where('ID',$data['deviceid'])->first();
-            if ($checkLonerdevice->Loaner_device == 1) {
-                $deviceAllocationLog->Loner_Allocation_Date = date("Y-m-d");
-                $deviceAllocationLog->save();
-            }
-            $deviceAllocationLog->save();
+            if($flag == 1)
+            {     
+                if($assignedFlag == 1)// true
+                {
+                    return response()->json([
+                        'response' => 'error',
+                        'msg'=>'device allready allocated to other user'
+                     ]);
+                }else{
+                    $studentInventory = new StudentInventory();
+                    $studentInventory->Inventory_ID = $data['deviceid'];
+                    $studentInventory->School_ID = $schoolID;
+                    $studentInventory->Student_ID =$data['userid'];
+                    $studentInventory->save();
+        
+                    $deviceAllocationLog = new DeviceAllocationLog;
+                    $deviceAllocationLog->Inventory_ID = $data['deviceid'];
+                    $deviceAllocationLog->Student_ID = $data['userid'];
+                    $deviceAllocationLog->School_ID = $schoolID;
+                    $deviceAllocationLog->Allocated_Date = date("Y-m-d");
+                    $checkLonerdevice = InventoryManagement::where('ID',$data['deviceid'])->first();
+                    if ($checkLonerdevice->Loaner_device == 1) {
+                        $deviceAllocationLog->Loner_Allocation_Date = date("Y-m-d");
+                        $deviceAllocationLog->save();
+                    }
+                    $deviceAllocationLog->save();
+                }     
+          
             }else{  
             $studentinventorydata = StudentInventory::where('School_ID', $schoolID)->where(function ($query) use ($data) {$query->where('Inventory_ID', $data['deviceid'])->orWhere('Loner_ID', $data['deviceid']);})->first();
             DeviceAllocationLog::where('School_ID',$schoolID)->whereNull('Vacant_Date')->where('Student_ID',$studentinventorydata->Student_ID)->where('Inventory_ID',$data['deviceid'])->update(['Vacant_Date'=>date("Y-m-d")]);             
@@ -153,13 +168,12 @@ class AllocationController extends Controller {
                             $query->where('Inventory_ID', $data['deviceid'])
                             ->orWhere('Loner_ID', $data['deviceid']);
                         })
-                        ->forceDelete();                      
-                       
-                        
+                        ->forceDelete();                                                                     
             }
         }
-       return 'success'; 
-        
+        return response()->json([
+            'response' => 'success',            
+         ]);       
     }
 
     public function deallocateUsers($sid,$grade){
